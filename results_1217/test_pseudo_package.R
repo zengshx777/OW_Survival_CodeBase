@@ -1,0 +1,11 @@
+temp.data=data.frame(Y=Y,delta=delta)
+f=survfit(Surv(Y,delta)~1,data=temp.data)
+a=summary(f,times=30)
+a$surv
+temp.data=temp.data[-1,]
+f1=survfit(Surv(Y,delta)~1,data=temp.data)
+b=summary(f1,times=30)
+length(Y)*a$surv-(length(Y)-1)*b$surv
+ps.obs=pseudosurv(Y,event=delta,tmax=30)
+ps.obs$pseudo[1]
+pseudomean(Y,event=delta,tmax=30)
