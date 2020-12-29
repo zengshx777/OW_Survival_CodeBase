@@ -1,9 +1,10 @@
-setwd("C:/Users/Shuxi ZENG/Dropbox/Fourth Year/OW_Survival/codebase")
+setwd("~/OW_Survival/Codebase/OW_Survival_CodeBase")
 
 rm(list=ls())
 
 good_overlap=2; sample_size=200;truncate=50;
 n_simu=200;n_mc=10000
+
 
 multi.arm = F
 
