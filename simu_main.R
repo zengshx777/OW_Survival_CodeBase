@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # setwd("C:/Users/Shuxi ZENG/Dropbox/Fourth Year/OW_Survival/codebase/OW_Survival_CodeBase")
 # setwd("~/OW_Survival/Codebase/OW_Survival_CodeBase")
 
@@ -16,7 +15,6 @@ truncate.ph = 50;truncate.aft = 60;
 n_simu = 200;n_mc = 10000
 mao.method = T
 cox.q.method = T
-=======
 setwd("~/OW_Survival/Codebase/OW_Survival_CodeBase")
 
 rm(list=ls())
