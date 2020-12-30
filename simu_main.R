@@ -1,4 +1,4 @@
-# setwd("C:/Users/Shuxi ZENG/Dropbox/Fourth Year/OW_Survival/codebase/OW_Survival_CodeBase")
+setwd("C:/Users/Shuxi ZENG/Dropbox/Fourth Year/OW_Survival/codebase/OW_Survival_CodeBase")
 # setwd("~/OW_Survival/Codebase/OW_Survival_CodeBase")
 
 rm(list=ls())
@@ -10,12 +10,12 @@ if(length(args)==0){
     eval(parse(text=args[[i]]))
   }
 }
-#good_overlap = 1; sample_size = 200; multi.arm = F; prop.hazard = T
+good_overlap = 1; sample_size = 200; multi.arm = F; prop.hazard = T
 truncate.ph = 50;truncate.aft = 60;
 n_simu = 200;n_mc = 10000
 mao.method = T
 cox.q.method = T
-
+cox.msm.method = T
 
 # args=commandArgs(trailingOnly = TRUE)
 # if(length(args)==0){
@@ -80,6 +80,32 @@ g.calculation<-function(km.object,end.time,type=1)
   }
 }
 
+msm.calculation<-function(km.object,end.time,type=1)
+{
+  time.grid = km.object$time
+  surv.prob = km.object$surv
+  levels = ncol(surv.prob)
+  time.grid = c(0,time.grid) # Time grids for evaluation
+  diff.time.grid = c(diff(time.grid)) # Difference of time
+  if (type==1){
+    final.index = max(which(time.grid <= end.time))
+    return (surv.prob[final.index,])
+  }else{
+    if(!is.na(end.time)){
+      final.index = max(which(time.grid <= end.time))
+      diff.time.grid.temp = diff.time.grid
+      diff.time.grid.temp[final.index]=end.time-time.grid[final.index]
+    }else{
+      final.index = length(diff.time.grid)
+      diff.time.grid.temp = diff.time.grid
+    }
+    output = unlist(lapply(1:levels,FUN=function(y){
+      sum(unlist(lapply(1:final.index,FUN=function(x){surv.prob[x,y]*diff.time.grid.temp[x]})))
+    }))
+    return (output)
+  }
+}
+
 
 
 
@@ -97,6 +123,7 @@ ow_est=matrix(NA,n_simu,3)
 ipw_est=matrix(NA,n_simu,3)
 unadj_est=matrix(NA,n_simu,3)
 cox_q_est=matrix(NA,n_simu,3)
+cox_msm_est=matrix(NA,n_simu,3)
 
 
 ow_est_mao=matrix(NA,n_simu,3)
@@ -107,6 +134,7 @@ uw_est_mao=matrix(NA,n_simu,3)
 ow_se=matrix(NA,n_simu,3)
 ipw_se=matrix(NA,n_simu,3)
 cox_q_se=matrix(NA,n_simu,3)
+cox_msm_se=matrix(NA,n_simu,3)
 ow_se_mao=matrix(NA,n_simu,3)
 mw_se_mao=matrix(NA,n_simu,3)
 ipw_se_mao=matrix(NA,n_simu,3)
@@ -525,6 +553,70 @@ for (i in (1:n_simu)){
   cox_q_se[i,1] = sd(boot.1,na.rm = T)
   cox_q_se[i,2] = sd(boot.2,na.rm = T)
   cox_q_se[i,3] = sd(boot.3,na.rm = T)
+  }
+  
+  ## MSM model
+  if(cox.msm.method){
+      simu_data = data.frame(cbind(Y,DELTA,X,Z))
+      gps.model = multinom(Z ~ -1+X, data = simu_data, maxit = 500, Hess = TRUE, trace = FALSE)
+      e = gps.model$fitted.values 
+      if(length(unique(Z)) == 2){
+        e=cbind(1-e,e)
+      }
+      ## Calculate Stablized Weights
+      J = max(Z)+1   # Number of arms
+      w = matrix(rep(colMeans(e),length(Y)),ncol=J,byrow = T)/e
+      A = matrix(unlist(lapply(Z,FUN=function(x){as.numeric(x==0:(J-1))})),byrow=T,ncol=J)
+      s.weights = rowSums(A*w)
+
+      cox_msm_model = coxph(Surv(Y,DELTA)~Z,weights = s.weights, data=simu_data,
+                          method="breslow")
+      km.object = survfit(cox_msm_model, newdata = data.frame(Z=sort(unique(simu_data$Z))))
+            
+      if(multi.arm){
+        alpha.arg = c(-1,0,1)
+      }else{
+        alpha.arg = c(-1,1) 
+      }
+      group.mean = msm.calculation(km.object, end.time = NA, type = 2)
+      cox_msm_est[i,1] = sum(group.mean*alpha.arg)
+      group.mean = msm.calculation(km.object, end.time = truncate, type = 2)
+      cox_msm_est[i,2] = sum(group.mean*alpha.arg)
+      group.mean = msm.calculation(km.object, end.time = truncate, type = 1)
+      cox_msm_est[i,3] = sum(group.mean*alpha.arg)
+    ## Bootstrap for SE
+      boot.1 = boot.2 = boot.3 = numeric(250)
+    for (b in 1:250){
+      b.id = sample(1:sample_size,sample_size,replace = T)
+      b.data = simu_data[b.id,]
+      if(var(b.data$Z)==0){
+        next
+      }
+      gps.model = multinom(Z ~ -1+X, data = b.data, maxit = 500, Hess = TRUE, trace = FALSE)
+      e = gps.model$fitted.values 
+      if(length(unique(b.data$Z)) == 2){
+        e=cbind(1-e,e)
+      }
+      ## Calculate Stablized Weights
+      J = max(b.data$Z)+1   # Number of arms
+      w = matrix(rep(colMeans(e),length(Y)),ncol=J,byrow = T)/e
+      A = matrix(unlist(lapply(b.data$Z,FUN=function(x){as.numeric(x==0:(J-1))})),byrow=T,ncol=J)
+      s.weights = rowSums(A*w)
+      
+      cox_msm_model = coxph(Surv(Y,DELTA)~Z,weights = s.weights, data=b.data,
+                            method="breslow")
+      km.object = survfit(cox_msm_model, newdata = data.frame(Z=sort(unique(b.data$Z))))
+      group.mean = msm.calculation(km.object, end.time = NA, type = 2)
+      boot.1[b] = sum(group.mean*alpha.arg)
+      group.mean = msm.calculation(km.object, end.time = truncate, type = 2)
+      boot.2[b] = sum(group.mean*alpha.arg)
+      group.mean = msm.calculation(km.object, end.time = truncate, type = 1)
+      boot.3[b] = sum(group.mean*alpha.arg)
+    }
+    
+    cox_msm_se[i,1] = sd(boot.1,na.rm = T)
+    cox_msm_se[i,2] = sd(boot.2,na.rm = T)
+    cox_msm_se[i,3] = sd(boot.3,na.rm = T)
   }
   print(paste("==",i,"=="))
   
