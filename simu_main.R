@@ -1,11 +1,32 @@
-setwd("C:/Users/Shuxi ZENG/Dropbox/Fourth Year/OW_Survival/codebase")
+<<<<<<< HEAD
+# setwd("C:/Users/Shuxi ZENG/Dropbox/Fourth Year/OW_Survival/codebase/OW_Survival_CodeBase")
+# setwd("~/OW_Survival/Codebase/OW_Survival_CodeBase")
+
+rm(list=ls())
+args=commandArgs(trailingOnly = TRUE)
+if(length(args)==0){
+  print("No arguments supplied.")
+}else{
+  for(i in 1:length(args)){
+    eval(parse(text=args[[i]]))
+  }
+}
+#good_overlap = 1; sample_size = 200; multi.arm = F; prop.hazard = T
+truncate.ph = 50;truncate.aft = 60;
+n_simu = 200;n_mc = 10000
+mao.method = T
+cox.q.method = T
+=======
+setwd("~/OW_Survival/Codebase/OW_Survival_CodeBase")
 
 rm(list=ls())
 
 good_overlap=2; sample_size=200;truncate=50;
 n_simu=200;n_mc=10000
 
+
 multi.arm = F
+>>>>>>> cf1e4e1f7e04a091cf138b01cf4ae5b862adebbf
 
 # args=commandArgs(trailingOnly = TRUE)
 # if(length(args)==0){
@@ -30,7 +51,7 @@ library(survival)
 source("IPWC.R")
 source("OW.R")
 source("PSW_pseudo.R")
-# source("Mao_Method_func.R")
+source("Mao_Method_func.R")
 set.seed(2020)
 coverage_rate_calc<-function(point_est,se_est,true)
 {
@@ -42,6 +63,32 @@ coverage_rate_calc<-function(point_est,se_est,true)
   }
 
   return (mean((true<point_est+se_est*qnorm(0.975))&(true>=point_est-se_est*qnorm(0.975))))
+}
+
+g.calculation<-function(km.object,end.time,type=1)
+{
+  time.grid = km.object$time
+  surv.prob = km.object$surv
+  n.size = ncol(surv.prob)
+  time.grid = c(0,time.grid) # Time grids for evaluation
+  diff.time.grid = c(diff(time.grid)) # Difference of time
+  if (type==1){
+    final.index = max(which(time.grid <= end.time))
+    return (mean(surv.prob[final.index,]))
+  }else{
+    if(!is.na(end.time)){
+      final.index = max(which(time.grid <= end.time))
+      diff.time.grid.temp = diff.time.grid
+      diff.time.grid.temp[final.index]=end.time-time.grid[final.index]
+    }else{
+      final.index = length(diff.time.grid)
+      diff.time.grid.temp = diff.time.grid
+    }
+  output = mean(unlist(lapply(1:n.size,FUN=function(y){
+                  sum(unlist(lapply(1:final.index,FUN=function(x){surv.prob[x,y]*diff.time.grid.temp[x]})))
+  })))
+    return (output)
+  }
 }
 
 
@@ -62,6 +109,7 @@ ipw_est=matrix(NA,n_simu,3)
 unadj_est=matrix(NA,n_simu,3)
 cox_q_est=matrix(NA,n_simu,3)
 
+
 ow_est_mao=matrix(NA,n_simu,3)
 mw_est_mao=matrix(NA,n_simu,3)
 ipw_est_mao=matrix(NA,n_simu,3)
@@ -69,7 +117,7 @@ uw_est_mao=matrix(NA,n_simu,3)
 
 ow_se=matrix(NA,n_simu,3)
 ipw_se=matrix(NA,n_simu,3)
-
+cox_q_se=matrix(NA,n_simu,3)
 ow_se_mao=matrix(NA,n_simu,3)
 mw_se_mao=matrix(NA,n_simu,3)
 ipw_se_mao=matrix(NA,n_simu,3)
@@ -119,25 +167,33 @@ for (i in 1:n_mc){
   
   
   # Survival time
-  gamma.1=0.2;gamma.2=0.5;alpha=c(2,1.5,-1,1);lambda=0.0001;v=3
-  hazard=as.vector(gamma.1*as.numeric(Z==1)+gamma.2*as.numeric(Z==2)+X[,-1]%*%alpha)
-  random_simu=runif(sample_size)
-  Survival_time=(-log(random_simu)/(lambda*exp(hazard)))^(1/v)
+ 
+  if(prop.hazard){
+    gamma.1=0.5;gamma.2=0.5;alpha=c(2,1.5,-1,1);lambda=0.0001;v=3;truncate = truncate.ph
+    # The covariate and the treatment is defined on proportional hazard
+    random_simu=runif(sample_size)
+    # get true est
+    hazard_0=as.vector(X[,-1]%*%alpha)
+    hazard_1=as.vector(gamma.1+X[,-1]%*%alpha)
+    hazard_2=as.vector(gamma.2+X[,-1]%*%alpha)
+    Survival_time_0=(-log(random_simu)/(lambda*exp(hazard_0)))^(1/v)
+    Survival_time_1=(-log(random_simu)/(lambda*exp(hazard_1)))^(1/v)
+    Survival_time_2=(-log(random_simu)/(lambda*exp(hazard_2)))^(1/v)
+  }else{
+    gamma.1=-1;gamma.2=-1;alpha=-c(2,1.5,-1,1);lambda=0.0001;v=3;truncate = truncate.aft
+    # AFT but not PH; log-normal
+    random_simu = rnorm(sample_size,sd=0.81)
+    Survival_time_0 = exp(3.5+0.2*(X[,-1]%*%alpha)+random_simu)
+    Survival_time_1 = exp(3.5+0.2*(gamma.1+X[,-1]%*%alpha)+random_simu)
+    Survival_time_2 = exp(3.5+0.2*(gamma.2+X[,-1]%*%alpha)+random_simu)
+  }
   
-  # get true est
-  hazard_0=as.vector(X[,-1]%*%alpha)
-  hazard_1=as.vector(gamma.1+X[,-1]%*%alpha)
-  hazard_2=as.vector(gamma.2+X[,-1]%*%alpha)
-  Survival_time_0=(-log(random_simu)/(lambda*exp(hazard_0)))^(1/v)
-  Survival_time_1=(-log(random_simu)/(lambda*exp(hazard_1)))^(1/v)
-  Survival_time_2=(-log(random_simu)/(lambda*exp(hazard_2)))^(1/v)
   
   # truncate=min(quantile(Survival_time_1[Z==1],0.75),quantile(Survival_time_0[Z==0],0.75))
   tilt.h = 1/rowSums(1/soft.max)
   if(!multi.arm){
     true_est[i,1]=mean(Survival_time_1)-mean(Survival_time_0)
     true_est_ow[i,1]=sum((Survival_time_1-Survival_time_0)*tilt.h)/sum(tilt.h)
-    
     true_est[i,3]=mean(Survival_time_1>truncate)-mean(Survival_time_0>truncate)
     true_est_ow[i,3]=sum((as.numeric(Survival_time_1>truncate)-as.numeric(Survival_time_0>truncate))*tilt.h)/sum(tilt.h)
 
@@ -145,7 +201,6 @@ for (i in 1:n_mc){
     Survival_time_0[Survival_time_0>truncate]=truncate
     true_est[i,2]=mean(Survival_time_1)-mean(Survival_time_0)
     true_est_ow[i,2]=sum((Survival_time_1-Survival_time_0)*tilt.h)/sum(tilt.h)
-  
   }else{
     true_est[i,1] = mean(Survival_time_2)-mean(Survival_time_0)
     true_est_ow[i,1] = sum((Survival_time_2-Survival_time_0)*tilt.h)/sum(tilt.h)
@@ -200,18 +255,33 @@ for (i in (1:n_simu)){
 
   
   # Survival time
-  gamma.1=0.2;gamma.2=0.5;alpha=c(2,1.5,-1,1);lambda=0.0001;v=3
-  hazard=as.vector(gamma.1*as.numeric(Z==1)+gamma.2*as.numeric(Z==2)+X[,-1]%*%alpha)
-  random_simu=runif(sample_size)
-  Survival_time=(-log(random_simu)/(lambda*exp(hazard)))^(1/v)
+  if(prop.hazard){
+    gamma.1=0.5;gamma.2=0.5;alpha=c(2,1.5,-1,1);lambda=0.0001;v=3;truncate = truncate.ph
+    # The covariate and the treatment is defined on proportional hazard
+    hazard=as.vector(gamma.1*as.numeric(Z==1)+gamma.2*as.numeric(Z==2)+X[,-1]%*%alpha)
+    random_simu=runif(sample_size)
+    Survival_time=(-log(random_simu)/(lambda*exp(hazard)))^(1/v)
+    
+    # get true est
+    hazard_0=as.vector(X[,-1]%*%alpha)
+    hazard_1=as.vector(gamma.1+X[,-1]%*%alpha)
+    hazard_2=as.vector(gamma.2+X[,-1]%*%alpha)
+    Survival_time_0=(-log(random_simu)/(lambda*exp(hazard_0)))^(1/v)
+    Survival_time_1=(-log(random_simu)/(lambda*exp(hazard_1)))^(1/v)
+    Survival_time_2=(-log(random_simu)/(lambda*exp(hazard_2)))^(1/v)
+    
+  }else{
+    # AFT but not PH; log-normal
+    gamma.1=-1;gamma.2=-1;alpha=-c(2,1.5,-1,1);lambda=0.0001;v=3;truncate = truncate.aft
+    random_simu = rnorm(sample_size,sd=0.81)
+    Survival_time = exp(3.5+0.2*(as.vector(gamma.1*as.numeric(Z==1)+gamma.2*as.numeric(Z==2)+X[,-1]%*%alpha))+random_simu)
+    Survival_time_0 = exp(3.5+0.2*(X[,-1]%*%alpha)+random_simu)
+    Survival_time_1 = exp(3.5+0.2*(gamma.1+X[,-1]%*%alpha)+random_simu)
+    Survival_time_2 = exp(3.5+0.2*(gamma.2+X[,-1]%*%alpha)+random_simu)
+  }
+
   
-  # get true est
-  hazard_0=as.vector(X[,-1]%*%alpha)
-  hazard_1=as.vector(gamma.1+X[,-1]%*%alpha)
-  hazard_2=as.vector(gamma.2+X[,-1]%*%alpha)
-  Survival_time_0=(-log(random_simu)/(lambda*exp(hazard_0)))^(1/v)
-  Survival_time_1=(-log(random_simu)/(lambda*exp(hazard_1)))^(1/v)
-  Survival_time_2=(-log(random_simu)/(lambda*exp(hazard_2)))^(1/v)
+
   
   # truncate=min(quantile(Survival_time_1[Z==1],0.75),quantile(Survival_time_0[Z==0],0.75))
   tilt.h = 1/rowSums(1/soft.max)
@@ -219,25 +289,25 @@ for (i in (1:n_simu)){
     true_est_finite[i,1]=mean(Survival_time_1)-mean(Survival_time_0)
     true_est_ow_finite[i,1]=sum((Survival_time_1-Survival_time_0)*tilt.h)/sum(tilt.h)
     
-    # true_est_finite[i,3]=mean(Survival_time_1>truncate)-mean(Survival_time_0>truncate)
-    # true_est_ow_finite[i,3]=sum((as.numeric(Survival_time_1>truncate)-as.numeric(Survival_time_0>truncate))*tilt.h)/sum(tilt.h)
-    # 
-    # Survival_time_1[Survival_time_1>truncate]=truncate
-    # Survival_time_0[Survival_time_0>truncate]=truncate
-    # true_est_finite[i,2]=mean(Survival_time_1)-mean(Survival_time_0)
-    # true_est_ow_finite[i,2]=sum((Survival_time_1-Survival_time_0)*tilt.h)/sum(tilt.h)
+    true_est_finite[i,3]=mean(Survival_time_1>truncate)-mean(Survival_time_0>truncate)
+    true_est_ow_finite[i,3]=sum((as.numeric(Survival_time_1>truncate)-as.numeric(Survival_time_0>truncate))*tilt.h)/sum(tilt.h)
+
+    Survival_time_1[Survival_time_1>truncate]=truncate
+    Survival_time_0[Survival_time_0>truncate]=truncate
+    true_est_finite[i,2]=mean(Survival_time_1)-mean(Survival_time_0)
+    true_est_ow_finite[i,2]=sum((Survival_time_1-Survival_time_0)*tilt.h)/sum(tilt.h)
   }else{
     # alpha = c(-1,0,1)
     true_est_finite[i,1] = mean(Survival_time_2)-mean(Survival_time_0)
     true_est_ow_finite[i,1] = sum((Survival_time_2-Survival_time_0)*tilt.h)/sum(tilt.h)
     
-    # true_est_finite[i,3]= mean(Survival_time_2>truncate)-mean(Survival_time_0>truncate)
-    # true_est_ow_finite[i,3] = sum((as.numeric(Survival_time_2>truncate)-as.numeric(Survival_time_0>truncate))*tilt.h)/sum(tilt.h)
-    # 
-    # Survival_time_1[Survival_time_2>truncate] = truncate
-    # Survival_time_0[Survival_time_0>truncate] = truncate
-    # true_est_finite[i,2] = mean(Survival_time_2)-mean(Survival_time_0)
-    # true_est_ow_finite[i,2] = sum((Survival_time_2-Survival_time_0)*tilt.h)/sum(tilt.h)
+    true_est_finite[i,3]= mean(Survival_time_2>truncate)-mean(Survival_time_0>truncate)
+    true_est_ow_finite[i,3] = sum((as.numeric(Survival_time_2>truncate)-as.numeric(Survival_time_0>truncate))*tilt.h)/sum(tilt.h)
+
+    Survival_time_1[Survival_time_2>truncate] = truncate
+    Survival_time_0[Survival_time_0>truncate] = truncate
+    true_est_finite[i,2] = mean(Survival_time_2)-mean(Survival_time_0)
+    true_est_ow_finite[i,2] = sum((Survival_time_2-Survival_time_0)*tilt.h)/sum(tilt.h)
   }
   
   
@@ -291,48 +361,7 @@ for (i in (1:n_simu)){
                     evaluate.time = truncate)
   ow_est[i,3] <- res.OW$tau
   ow_se[i,3]<- res.OW$se
-  
-  # ASCE
-  # pseudo_obs=pseudomean(Y,event=DELTA)
-  # # # IPW
-  # res.IPWC <- IPWC(y.all=pseudo_obs, z.all=Z, W.all=X, q.all=0)
-  # ipw_est[i,1] <- res.IPWC$TAU
-  # ipw_se[i,1]<- res.IPWC$SE
-  # # # OW
-  # res.OW <- OW(y=pseudo_obs, z=Z, W=X)
-  # ow_est[i,1] <- res.OW$tau
-  # ow_se[i,1] <- res.OW$se
-  # # 
-  # unadj_est[i,1]=mean(pseudo_obs[Z==1])-mean(pseudo_obs[Z==0])
-  # 
-  # # RACE
-  # pseudo_obs=pseudomean(Y,event=delta,tmax=truncate)
-  # # IPW
-  # res.IPWC <- IPWC(y.all=pseudo_obs, z.all=Z, W.all=X, q.all=0)
-  # ipw_est[i,2] <- res.IPWC$TAU
-  # ipw_se[i,2]<- res.IPWC$SE
-  # # OW
-  # res.OW <- OW(y=pseudo_obs, z=Z, W=X)
-  # ow_est[i,2] <- res.OW$tau
-  # ow_se[i,2] <- res.OW$se
-  # 
-  # unadj_est[i,2]=mean(pseudo_obs[Z==1])-mean(pseudo_obs[Z==0])
-  # 
-  # # SPCE
-  # pseudo_obs=pseudosurv(Y,event=delta,tmax=truncate)
-  # pseudo_obs=pseudo_obs$pseudo
-  # # IPW
-  # res.IPWC <- IPWC(y.all=pseudo_obs, z.all=Z, W.all=X, q.all=0)
-  # ipw_est[i,3] <- res.IPWC$TAU
-  # ipw_se[i,3]<- res.IPWC$SE
-  # # OW
-  # res.OW <- OW(y=pseudo_obs, z=Z, W=X)
-  # ow_est[i,3] <- res.OW$tau
-  # ow_se[i,3] <- res.OW$se
-  
-  # unadj_est[i,3]=mean(pseudo_obs[Z==1])-mean(pseudo_obs[Z==0])
-  
-  
+
   # {
   #   # ASCE
   #   pseudo_obs=numeric(length(Y))
@@ -380,70 +409,150 @@ for (i in (1:n_simu)){
   # }
   # 
 
-  ### Mao's method
-  # res.IPW = estimand_analysis(X = X[,-1],Z = Z,Y = Y,delta = delta, weight.type = "IPW",
-  #                             t.trunc=truncate, tmax = 120)
-  # res.OW = estimand_analysis(X = X[,-1],Z = Z,Y = Y,delta = delta, weight.type = "OVERLAP",
-  #                            t.trunc=truncate, tmax = 120)
-  # res.MW = estimand_analysis(X = X[,-1],Z = Z,Y = Y,delta = delta, weight.type = "MW",
-  #                            t.trunc=truncate, tmax = 120)
-  # res.UW = estimand_analysis(X = X[,-1],Z = Z,Y = Y,delta = delta, weight.type = "UNWEIGHT",
-  #                            t.trunc=truncate, tmax = 120)
-  # 
-  # ipw_est_mao[i,]=res.IPW$ans[,2]
-  # ow_est_mao[i,]=res.OW$ans[,2]
-  # mw_est_mao[i,]=res.MW$ans[,2]
-  # uw_est_mao[i,]=res.UW$ans[,2]
-  # 
-  # ipw_se_mao[i,]=res.IPW$ans[,3]
-  # ow_se_mao[i,]=res.OW$ans[,3]
-  # mw_se_mao[i,]=res.MW$ans[,3]
-  # uw_se_mao[i,]=res.UW$ans[,3]
+  ## Mao's method
+  if(mao.method){
+    if(!multi.arm){
+      tmax = min(max(Y[Z==1]),max(Y[Z==0]))
+      res.mao.IPW = estimand_analysis(X = X[,-1],Z = Z,Y = Y, delta = DELTA, weight.type = "IPW",
+                                      t.trunc=truncate, tmax = tmax)
+      res.mao.OW = estimand_analysis(X = X[,-1],Z = Z,Y = Y, delta = DELTA, weight.type = "OVERLAP",
+                                     t.trunc=truncate, tmax = tmax)
+      res.mao.MW = estimand_analysis(X = X[,-1],Z = Z,Y = Y, delta = DELTA, weight.type = "MW",
+                                     t.trunc=truncate, tmax = tmax)
+      ## Unweighted Cox
+      res.mao.UW = estimand_analysis(X = X[,-1],Z = Z,Y = Y, delta = DELTA, weight.type = "UNWEIGHT",
+                                     t.trunc=truncate, tmax = tmax)
+    }else{
+      tmax = min(max(Y[Z==0]),max(Y[Z==2]))
+      X.aug = cbind(X,as.numeric(Z==1))
+      colnames(X.aug) = c("X0","X1","X2","X3","X4","Z01")
+      Z.aug = as.numeric(Z==0)
+      res.mao.IPW = estimand_analysis(X = X.aug[,-1],Z = Z.aug, Y = Y, delta = DELTA, weight.type = "IPW",
+                                      t.trunc=truncate, tmax = tmax)
+      res.mao.OW = estimand_analysis(X = X.aug[,-1],Z = Z.aug, Y = Y, delta = DELTA, weight.type = "OVERLAP",
+                                     t.trunc=truncate, tmax = tmax)
+      res.mao.MW = estimand_analysis(X = X.aug[,-1],Z = Z.aug, Y = Y, delta = DELTA, weight.type = "MW",
+                                     t.trunc=truncate, tmax = tmax)
+      ## Unweighted Cox
+      res.mao.UW = estimand_analysis(X = X.aug[,-1],Z = Z.aug, Y = Y, delta = DELTA, weight.type = "UNWEIGHT",
+                                     t.trunc=truncate, tmax = tmax)
+    }
+
+   
+  ipw_est_mao[i,]=res.mao.IPW$ans[,2]
+  ow_est_mao[i,]=res.mao.OW$ans[,2]
+  mw_est_mao[i,]=res.mao.MW$ans[,2]
+  uw_est_mao[i,]=res.mao.UW$ans[,2]
+
+  ipw_se_mao[i,]=res.mao.IPW$ans[,3]
+  ow_se_mao[i,]=res.mao.OW$ans[,3]
+  mw_se_mao[i,]=res.mao.MW$ans[,3]
+  uw_se_mao[i,]=res.mao.UW$ans[,3]
+  }
+  ## Cox Q model
+  if(cox.q.method){
+    if(!multi.arm){
+      simu_data = data.frame(cbind(Y,DELTA,X,Z))
+      cox_q_model = coxph(Surv(Y,DELTA)~X1+X2+X3+X4+Z,data=simu_data,
+                            method="breslow")
+      treated_data = simu_data
+      treated_data$Z=1
+      control_data = simu_data
+      control_data$Z=0
+    }else{
+      simu_data = data.frame(cbind(Y,DELTA,X,Z))
+      simu_data$Z.01 = as.numeric(Z==1)
+      simu_data$Z.02 = as.numeric(Z==2)
+      simu_data$Z = simu_data$Z.02
+      cox_q_model = coxph(Surv(Y,DELTA)~X1+X2+X3+X4+Z.01+Z,data=simu_data,
+                          method="breslow")
+      treated_data = simu_data
+      treated_data$Z.01=0
+      treated_data$Z=1
+      control_data = simu_data
+      control_data$Z.01 = 0
+      control_data$Z=0
+    }
   
-  # ## Cox Q model
-  # simu_data=data.frame(cbind(X,Z))
-  # cox_q_model=flexsurvreg(Surv(Observed_Survival_time,Death)~X1+X2+X3+X4+Z,data=simu_data,
-  #                       dist="weibull")
-  # treated_data=simu_data
-  # treated_data$Z=1
-  # control_data=simu_data
-  # control_data$Z=0
-  # ## G-Formula
-  # if(estimand=="mean"){
-  # cox_q_treated=summary(cox_q_model,type="mean",newdata=treated_data)
-  # cox_q_control=summary(cox_q_model,type="mean",newdata=control_data)
-  # }else if(estimand=="survprob"){
-  # cox_q_treated=summary(cox_q_model,type="survival",newdata=treated_data,t=c(60))
-  # cox_q_control=summary(cox_q_model,type="survival",newdata=control_data,t=c(60))
-  # }else{
-  # cox_q_treated=summary(cox_q_model,type="rmst",newdata=treated_data,t=c(60))
-  # cox_q_control=summary(cox_q_model,type="rmst",newdata=control_data,t=c(60))
-  # }
-  # treated_surv=unlist(lapply(cox_q_treated,FUN=function(x){x[2]}))
-  # control_surv=unlist(lapply(cox_q_control,FUN=function(x){x[2]}))
-  # cox_q_est[i]=mean(treated_surv-control_surv)
+  # G computation
+  km.object.treated = survfit(cox_q_model, newdata = treated_data)
+  km.object.control = survfit(cox_q_model, newdata = control_data)
+  
+  cox_q_est[i,1] = 
+    g.calculation(km.object = km.object.treated, end.time = NA, type=2)-
+    g.calculation(km.object = km.object.control, end.time = NA, type=2)
+  
+  cox_q_est[i,2] = 
+    g.calculation(km.object = km.object.treated, end.time = truncate, type=2)-
+    g.calculation(km.object = km.object.control, end.time = truncate, type=2)
+  
+  cox_q_est[i,3] = 
+    g.calculation(km.object = km.object.treated, end.time = truncate, type=1)-
+    g.calculation(km.object = km.object.control, end.time = truncate, type=1)
+  
+
+  boot.1=boot.2=boot.3 = rep(NA,250)
   ## Bootstrap for SE
+  for (b in 1:250){
+    b.id = sample(1:sample_size,sample_size,replace = T)
+    b.data = simu_data[b.id,]
+    if(var(b.data$Z)==0){
+      next
+    }
+    if(!multi.arm){
+      cox_q_model = coxph(Surv(Y,DELTA)~X1+X2+X3+X4+Z,data=b.data,
+                          method="breslow")
+      treated_data = b.data
+      treated_data$Z=1
+      control_data = b.data
+      control_data$Z=0
+    }else{
+      cox_q_model = coxph(Surv(Y,DELTA)~X1+X2+X3+X4+Z.01+Z,data=b.data,
+                          method="breslow")
+      treated_data = b.data
+      treated_data$Z.01=0
+      treated_data$Z=1
+      control_data = b.data
+      control_data$Z.01=0
+      control_data$Z=0
+    }
+    # G computation
+    km.object.treated = survfit(cox_q_model, newdata = treated_data)
+    km.object.control = survfit(cox_q_model, newdata = control_data)
+    
+    boot.1[b] = 
+      g.calculation(km.object = km.object.treated, end.time = NA, type=2)-
+      g.calculation(km.object = km.object.control, end.time = NA, type=2)
+    
+    boot.2[b] = 
+      g.calculation(km.object = km.object.treated, end.time = truncate, type=2)-
+      g.calculation(km.object = km.object.control, end.time = truncate, type=2)
+    
+    boot.3[b] = 
+      g.calculation(km.object = km.object.treated, end.time = truncate, type=1)-
+      g.calculation(km.object = km.object.control, end.time = truncate, type=1)
+  }
   
+  cox_q_se[i,1] = sd(boot.1,na.rm = T)
+  cox_q_se[i,2] = sd(boot.2,na.rm = T)
+  cox_q_se[i,3] = sd(boot.3,na.rm = T)
+  }
   print(paste("==",i,"=="))
   
-  # if(i==1){
-  # setwd("results_1217/")
-  # }
-  
-  
-  # save(i,ow_est,ipw_est,unadj_est,
-  #      cox_q_est,ow_se,ipw_se,
-  #      true_est,true_est_ow,
-  #      true_est_finite,true_est_ow_finite,
-  #      ipw_est_mao,ipw_se_mao,
-  #      uw_est_mao,uw_se_mao,
-  #      ow_est_mao,ow_se_mao,
-  #      mw_est_mao,mw_se_mao,
-  #      ow_est_by_group,
-  #      ipw_est_by_group,
-  #      ow_se_by_group,
-  #      ipw_se_by_group,
-  #      file=paste(good_overlap,sample_size,multi.arm,"new_result.RData",sep="_"))
+  save(i,ow_est,ipw_est,unadj_est,
+       ow_se,ipw_se,
+       true_est,true_est_ow,
+       true_est_finite,true_est_ow_finite,
+       ipw_est_mao,ipw_se_mao,
+       uw_est_mao,uw_se_mao,
+       ow_est_mao,ow_se_mao,
+       mw_est_mao,mw_se_mao,
+       cox_q_est,cox_q_se,
+       ow_est_by_group,
+       ipw_est_by_group,
+       ow_se_by_group,
+       ipw_se_by_group,
+       file=paste(good_overlap,sample_size,multi.arm,prop.hazard,"collected_result.RData",sep="_"))
 }
 
 print(paste("==Sample size",sample_size,"=="))
@@ -582,45 +691,45 @@ print(paste("==overlap",good_overlap,"=="))
 # legend("top",inset=0,title="Method, Overlaps Condition", col=c("black","red","purple","blue"),lwd=1.5,
 #        lty=1,pch=c(15,17,18,19),legend=c("OW, Good Overlaps","OW, Poor Overlaps","IPW, Good Overlaps","IPW, Poor Overlaps"),horiz=TRUE)
 # dev.off()
-coverage_rate_calc(ow_est[,1],ow_se[,1],mean(true_est_ow[,1]))
-coverage_rate_calc(ow_est[,2],ow_se[,2],mean(true_est_ow[,2]))
-coverage_rate_calc(ow_est[,3],ow_se[,3],mean(true_est_ow[,3]))
-
-coverage_rate_calc(ow_est[,1],ow_se[,1],mean(true_est_ow[,1]))
-coverage_rate_calc(ow_est[,2],ow_se[,2],mean(true_est_ow[,2]))
-coverage_rate_calc(ow_est[,3],ow_se[,3],mean(true_est_ow[,3]))
-
-sqrt(mean((unadj_est[,1]-true_est_finite[,1])^2))/mean(abs(true_est_finite[,1]))
-
-sqrt(mean((ipw_est[,1]-true_est_finite[,1])^2))/mean(abs(true_est_finite[,1]))
-sqrt(mean((ipw_est_by_group[,1]-true_est_finite[,1])^2))/mean(abs(true_est_finite[,1]))
-sqrt(mean((ipw_est_mao[,1]-true_est_finite[,1])^2))/mean(abs(true_est_finite[,1]))
-
-sqrt(mean((ow_est[,1]-true_est_ow_finite[,1])^2))/mean(abs(true_est_ow_finite[,1]))
-sqrt(mean((ow_est_by_group[,1]-true_est_ow_finite[,1])^2))/mean(abs(true_est_ow_finite[,1]))
-sqrt(mean((ow_est_mao[,1]-true_est_ow_finite[,1])^2))/mean(abs(true_est_ow_finite[,1]))
-
-sqrt(mean((unadj_est[,2]-true_est_finite[,2])^2))/mean(abs(true_est_finite[,2]))
-
-sqrt(mean((ipw_est[,2]-true_est_finite[,2])^2))/mean(abs(true_est_finite[,2]))
-sqrt(mean((ipw_est_by_group[,2]-true_est_finite[,2])^2))/mean(abs(true_est_finite[,2]))
-sqrt(mean((ipw_est_mao[,2]-true_est_finite[,2])^2))/mean(abs(true_est_finite[,2]))
-
-
-sqrt(mean((ow_est[,2]-true_est_ow_finite[,2])^2))/mean(abs(true_est_ow_finite[,2]))
-sqrt(mean((ow_est_by_group[,2]-true_est_ow_finite[,2])^2))/mean(abs(true_est_ow_finite[,2]))
-sqrt(mean((ow_est_mao[,2]-true_est_ow_finite[,2])^2))/mean(abs(true_est_finite[,2]))
-
-
-
-sqrt(mean((ipw_est[id,3]-true_est_finite[id,3])^2))/mean(abs(true_est_finite[id,3]))
-sqrt(mean((ipw_est_by_group[,3]-true_est_finite[,3])^2))/mean(abs(true_est_finite[,3]))
-sqrt(mean((ipw_est_mao[,3]-true_est_finite[,3])^2))/mean(abs(true_est_finite[,3]))
-
-
-sqrt(mean((ow_est[,3]-true_est_ow_finite[,3])^2))/mean(abs(true_est_ow_finite[,3]))
-sqrt(mean((ow_est_by_group[,3]-true_est_ow_finite[,3])^2))/mean(abs(true_est_ow_finite[,3]))
-sqrt(mean((ow_est_mao[,3]-true_est_ow_finite[,3])^2))/mean(abs(true_est_finite[,3]))
+# coverage_rate_calc(ow_est[,1],ow_se[,1],mean(true_est_ow[,1]))
+# coverage_rate_calc(ow_est[,2],ow_se[,2],mean(true_est_ow[,2]))
+# coverage_rate_calc(ow_est[,3],ow_se[,3],mean(true_est_ow[,3]))
+# 
+# coverage_rate_calc(ow_est[,1],ow_se[,1],mean(true_est_ow[,1]))
+# coverage_rate_calc(ow_est[,2],ow_se[,2],mean(true_est_ow[,2]))
+# coverage_rate_calc(ow_est[,3],ow_se[,3],mean(true_est_ow[,3]))
+# 
+# sqrt(mean((unadj_est[,1]-true_est_finite[,1])^2))/mean(abs(true_est_finite[,1]))
+# 
+# sqrt(mean((ipw_est[,1]-true_est_finite[,1])^2))/mean(abs(true_est_finite[,1]))
+# sqrt(mean((ipw_est_by_group[,1]-true_est_finite[,1])^2))/mean(abs(true_est_finite[,1]))
+# sqrt(mean((ipw_est_mao[,1]-true_est_finite[,1])^2))/mean(abs(true_est_finite[,1]))
+# 
+# sqrt(mean((ow_est[,1]-true_est_ow_finite[,1])^2))/mean(abs(true_est_ow_finite[,1]))
+# sqrt(mean((ow_est_by_group[,1]-true_est_ow_finite[,1])^2))/mean(abs(true_est_ow_finite[,1]))
+# sqrt(mean((ow_est_mao[,1]-true_est_ow_finite[,1])^2))/mean(abs(true_est_ow_finite[,1]))
+# 
+# sqrt(mean((unadj_est[,2]-true_est_finite[,2])^2))/mean(abs(true_est_finite[,2]))
+# 
+# sqrt(mean((ipw_est[,2]-true_est_finite[,2])^2))/mean(abs(true_est_finite[,2]))
+# sqrt(mean((ipw_est_by_group[,2]-true_est_finite[,2])^2))/mean(abs(true_est_finite[,2]))
+# sqrt(mean((ipw_est_mao[,2]-true_est_finite[,2])^2))/mean(abs(true_est_finite[,2]))
+# 
+# 
+# sqrt(mean((ow_est[,2]-true_est_ow_finite[,2])^2))/mean(abs(true_est_ow_finite[,2]))
+# sqrt(mean((ow_est_by_group[,2]-true_est_ow_finite[,2])^2))/mean(abs(true_est_ow_finite[,2]))
+# sqrt(mean((ow_est_mao[,2]-true_est_ow_finite[,2])^2))/mean(abs(true_est_finite[,2]))
+# 
+# 
+# 
+# sqrt(mean((ipw_est[id,3]-true_est_finite[id,3])^2))/mean(abs(true_est_finite[id,3]))
+# sqrt(mean((ipw_est_by_group[,3]-true_est_finite[,3])^2))/mean(abs(true_est_finite[,3]))
+# sqrt(mean((ipw_est_mao[,3]-true_est_finite[,3])^2))/mean(abs(true_est_finite[,3]))
+# 
+# 
+# sqrt(mean((ow_est[,3]-true_est_ow_finite[,3])^2))/mean(abs(true_est_ow_finite[,3]))
+# sqrt(mean((ow_est_by_group[,3]-true_est_ow_finite[,3])^2))/mean(abs(true_est_ow_finite[,3]))
+# sqrt(mean((ow_est_mao[,3]-true_est_ow_finite[,3])^2))/mean(abs(true_est_finite[,3]))
 
 
 # coverage_rate_calc(ow_est[,1],ow_se[,1],true_est_ow_finite[,1])
