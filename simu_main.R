@@ -15,16 +15,7 @@ truncate.ph = 50;truncate.aft = 60;
 n_simu = 200;n_mc = 10000
 mao.method = T
 cox.q.method = T
-setwd("~/OW_Survival/Codebase/OW_Survival_CodeBase")
 
-rm(list=ls())
-
-good_overlap=2; sample_size=200;truncate=50;
-n_simu=200;n_mc=10000
-
-
-multi.arm = F
->>>>>>> cf1e4e1f7e04a091cf138b01cf4ae5b862adebbf
 
 # args=commandArgs(trailingOnly = TRUE)
 # if(length(args)==0){
