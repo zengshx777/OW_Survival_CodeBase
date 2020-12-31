@@ -1,5 +1,3 @@
-
-
 ## Lower dimension of covariates, same from Lunceford setting
 X4 = sample(c(0, 1),
             sample_size,

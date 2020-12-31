@@ -346,7 +346,7 @@ for (i in (1:n_simu)) {
       tmax = min(max(Y[Z == 0]), max(Y[Z == 2]))
       X.aug = cbind(X, as.numeric(Z == 1))
       colnames(X.aug) = c("X0", "X1", "X2", "X3", "X4", "Z01")
-      Z.aug = as.numeric(Z == 0)
+      Z.aug = as.numeric(Z == 2)
       res.mao.IPW = estimand_analysis(
         X = X.aug[, -1],
         Z = Z.aug,
