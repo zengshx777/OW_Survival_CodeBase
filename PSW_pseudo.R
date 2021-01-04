@@ -78,9 +78,9 @@ PSW.pseudo <- function(Y,
       ))
     }
     Y = Y[keep.ind]
-    e = e[keep.ind, ]
+    e = e[keep.ind,]
     Z = Z[keep.ind]
-    X = X[keep.ind, ]
+    X = X[keep.ind,]
     DELTA = DELTA[keep.ind]
     ### Summary statistics recalculate
     N = length(Y)
@@ -357,7 +357,7 @@ PSW.pseudo <- function(Y,
   loglik = function(theta) {
     Theta = matrix(theta, ncol(X), ncol(A) - 1)
     Eta = X %*% Theta
-    ltheta = as.numeric(rowSums(A[, -1] * Eta) - log(1 + rowSums(exp(Eta))))
+    ltheta = as.numeric(rowSums(A[,-1] * Eta) - log(1 + rowSums(exp(Eta))))
     return(ltheta)
   }
   Sthetah = jacobian(loglik, thetah)

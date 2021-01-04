@@ -15,7 +15,7 @@ truncate.ph = 50
 truncate.aft = 60
 
 n_simu = 200
-n_mc = 10000
+n_mc = 100000
 
 mao.method = T
 cox.q.method = T
@@ -149,7 +149,7 @@ for (i in 1:n_mc) {
       as.numeric(Survival_time_2 > truncate) - as.numeric(Survival_time_0 > truncate)
     ) * tilt.h) / sum(tilt.h)
     
-    Survival_time_1[Survival_time_2 > truncate] = truncate
+    Survival_time_2[Survival_time_2 > truncate] = truncate
     Survival_time_0[Survival_time_0 > truncate] = truncate
     true_est[i, 2] = mean(Survival_time_2) - mean(Survival_time_0)
     true_est_ow[i, 2] = sum((Survival_time_2 - Survival_time_0) * tilt.h) /
@@ -305,6 +305,7 @@ for (i in (1:n_simu)) {
   if (mao.method) {
     if (!multi.arm) {
       tmax = min(max(Y[Z == 1]), max(Y[Z == 0]))
+      ## IPW based
       res.mao.IPW = estimand_analysis(
         X = X[, -1],
         Z = Z,
@@ -314,6 +315,7 @@ for (i in (1:n_simu)) {
         t.trunc = truncate,
         tmax = tmax
       )
+      ## OW based
       res.mao.OW = estimand_analysis(
         X = X[, -1],
         Z = Z,
@@ -323,6 +325,7 @@ for (i in (1:n_simu)) {
         t.trunc = truncate,
         tmax = tmax
       )
+      ## MW based
       res.mao.MW = estimand_analysis(
         X = X[, -1],
         Z = Z,
@@ -333,20 +336,21 @@ for (i in (1:n_simu)) {
         tmax = tmax
       )
       ## Unweighted Cox
-      res.mao.UW = estimand_analysis(
-        X = X[, -1],
-        Z = Z,
-        Y = Y,
-        delta = DELTA,
-        weight.type = "UNWEIGHT",
-        t.trunc = truncate,
-        tmax = tmax
-      )
+      # res.mao.UW = estimand_analysis(
+      #   X = X[, -1],
+      #   Z = Z,
+      #   Y = Y,
+      #   delta = DELTA,
+      #   weight.type = "UNWEIGHT",
+      #   t.trunc = truncate,
+      #   tmax = tmax
+      # )
     } else{
       tmax = min(max(Y[Z == 0]), max(Y[Z == 2]))
       X.aug = cbind(X, as.numeric(Z == 1))
       colnames(X.aug) = c("X0", "X1", "X2", "X3", "X4", "Z01")
       Z.aug = as.numeric(Z == 2)
+      ## IPW based
       res.mao.IPW = estimand_analysis(
         X = X.aug[, -1],
         Z = Z.aug,
@@ -356,6 +360,7 @@ for (i in (1:n_simu)) {
         t.trunc = truncate,
         tmax = tmax
       )
+      ## OW based
       res.mao.OW = estimand_analysis(
         X = X.aug[, -1],
         Z = Z.aug,
@@ -365,6 +370,7 @@ for (i in (1:n_simu)) {
         t.trunc = truncate,
         tmax = tmax
       )
+      ## MW based
       res.mao.MW = estimand_analysis(
         X = X.aug[, -1],
         Z = Z.aug,
@@ -375,27 +381,25 @@ for (i in (1:n_simu)) {
         tmax = tmax
       )
       ## Unweighted Cox
-      res.mao.UW = estimand_analysis(
-        X = X.aug[, -1],
-        Z = Z.aug,
-        Y = Y,
-        delta = DELTA,
-        weight.type = "UNWEIGHT",
-        t.trunc = truncate,
-        tmax = tmax
-      )
+      # res.mao.UW = estimand_analysis(
+      #   X = X.aug[, -1],
+      #   Z = Z.aug,
+      #   Y = Y,
+      #   delta = DELTA,
+      #   weight.type = "UNWEIGHT",
+      #   t.trunc = truncate,
+      #   tmax = tmax
+      # )
     }
-    
-    
     ipw_est_mao[i, ] = res.mao.IPW$ans[, 2]
     ow_est_mao[i, ] = res.mao.OW$ans[, 2]
     mw_est_mao[i, ] = res.mao.MW$ans[, 2]
-    uw_est_mao[i, ] = res.mao.UW$ans[, 2]
+    # uw_est_mao[i, ] = res.mao.UW$ans[, 2]
     
     ipw_se_mao[i, ] = res.mao.IPW$ans[, 3]
     ow_se_mao[i, ] = res.mao.OW$ans[, 3]
     mw_se_mao[i, ] = res.mao.MW$ans[, 3]
-    uw_se_mao[i, ] = res.mao.UW$ans[, 3]
+    # uw_se_mao[i, ] = res.mao.UW$ans[, 3]
   }
   
   ### Cox Q model

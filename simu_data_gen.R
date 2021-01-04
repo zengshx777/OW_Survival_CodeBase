@@ -128,7 +128,7 @@ if (!multi.arm) {
     as.numeric(Survival_time_2 > truncate) - as.numeric(Survival_time_0 > truncate)
   ) * tilt.h) / sum(tilt.h)
   
-  Survival_time_1[Survival_time_2 > truncate] = truncate
+  Survival_time_2[Survival_time_2 > truncate] = truncate
   Survival_time_0[Survival_time_0 > truncate] = truncate
   true_est_finite[i, 2] = mean(Survival_time_2) - mean(Survival_time_0)
   true_est_ow_finite[i, 2] = sum((Survival_time_2 - Survival_time_0) * tilt.h) /
