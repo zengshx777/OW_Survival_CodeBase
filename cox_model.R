@@ -117,6 +117,7 @@ cox.q.model.fit <-
         next
       }
       boot.est[b, ] = cox.q.model.est(b.Y, b.DELTA, b.X, b.Z, alpha, truncate)
+      print(paste("== Bootstrap time",b,"=="))
     }
     se = apply(boot.est, 2, sd, na.rm = T)
     names(point.est) = c("ASCE", "RACE", "SPCE")
@@ -225,6 +226,7 @@ cox.msm.model.fit <-
         next
       }
       boot.est[b,] = cox.msm.model.est(b.Y, b.DELTA, b.X, b.Z, alpha, truncate)
+      print(paste("== Bootstrap time",b,"=="))
     }
     se = apply(boot.est, 2, sd, na.rm = T)
     names(point.est) = c("ASCE", "RACE", "SPCE")

@@ -3,9 +3,10 @@ source("data_preprocessing.R")
 source("cox_model.R")
 source("PSW_pseudo.R")
 source("Mao_Method_func.R")
-
+# Y = round(Y)
+alpha.arg = c(-1,1,0);truncate.time=40
 ### PS Pseudo approach
-alpha.arg = c(-1,1,0)
+
 res.IPWC.ASCE = PSW.pseudo(
   Y,
   Z,
@@ -39,7 +40,7 @@ res.IPWC.RACE = PSW.pseudo(
   estimand.type = "RACE",
   ps.threshold = 0.03,
   alpha = alpha.arg,
-  evaluate.time = truncate
+  evaluate.time = truncate.time
 )
 
 res.OW.RACE = PSW.pseudo(
@@ -51,7 +52,7 @@ res.OW.RACE = PSW.pseudo(
   weight.type = "OW",
   estimand.type = "RACE",
   alpha = alpha.arg,
-  evaluate.time = truncate
+  evaluate.time = truncate.time
 )
 ow_est[i, 2] <- res.OW$tau
 ow_se[i, 2] <- res.OW$se
@@ -66,7 +67,7 @@ res.IPWC.SPCE = PSW.pseudo(
   estimand.type = "SPCE",
   ps.threshold = 0.03,
   alpha = alpha.arg,
-  evaluate.time = truncate
+  evaluate.time = truncate.time
 )
 
 res.OW.SPCE = PSW.pseudo(
@@ -78,7 +79,7 @@ res.OW.SPCE = PSW.pseudo(
   weight.type = "OW",
   estimand.type = "SPCE",
   alpha = alpha.arg,
-  evaluate.time = truncate
+  evaluate.time = truncate.time
 )
 
 
@@ -93,7 +94,7 @@ res.mao.IPW = estimand_analysis(
   Y = Y,
   delta = DELTA,
   weight.type = "IPW",
-  t.trunc = truncate,
+  t.trunc = truncate.time,
   tmax = tmax
 )
 
@@ -103,7 +104,7 @@ res.cox.q = cox.q.model.fit(
   X,
   Z,
   alpha = alpha.arg,
-  truncate =  truncate,
+  truncate =  truncate.time,
   boot.time = 250
 )
 
@@ -113,6 +114,6 @@ res.cox.msm = cox.msm.model.fit(
   X,
   Z,
   alpha = alpha.arg,
-  truncate =  truncate,
+  truncate =  truncate.time,
   boot.time = 250
 )

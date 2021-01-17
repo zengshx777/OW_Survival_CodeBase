@@ -33,7 +33,8 @@ dat<-na.omit(dat)
 dat[dat$CS_SITESPECIFIC_FACTOR_8<=6,]$CS_SITESPECIFIC_FACTOR_8<-6
 dat[!dat$RACE %in% c(1,2),]$RACE<-3 #combine non-white & non-black race group
 dat[dat$SPANISH_HISPANIC_ORIGIN %in% c(1:8),]$SPANISH_HISPANIC_ORIGIN<- 1
-dat<-dat %>% mutate (tstage =ifelse(TNM_CLIN_T %in% c("3","3A","3B","4"),2,1))%>% select(-TNM_CLIN_T)
+dat<-dat %>% mutate (tstage =ifelse(TNM_CLIN_T %in% c("3","3A","3B","4"),2,1))
+dat$TNM_CLIN_T=NULL
 #trx=1:"RP", trx=2: "EBRT+AD", trx=3: "EBRT+brachy±AD"
 names(dat)<-c("age","race","spanish","insurance","income","education",
               "deyo","dyear","psa","gs", "surgsite", "regdose", "boostdose","surgseq","hormone",

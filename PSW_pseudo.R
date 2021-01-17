@@ -4,6 +4,7 @@ library(mice)
 # library(rootSolve)
 library(numDeriv)
 library(survival)
+source("fast_pseudo_calculation.R")
 
 PSW.pseudo <- function(Y,
                        Z,
@@ -99,15 +100,15 @@ PSW.pseudo <- function(Y,
   
   ### Pseudo Obs
   if (estimand.type == "ASCE") {
-    pseudo.obs = pseudomean(Y, event = DELTA)
+    pseudo.obs = fast.pseudo(Y, event = DELTA, type = "mean")
   } else if (estimand.type == "RACE") {
-    pseudo.obs = pseudomean(Y, event = DELTA, tmax = evaluate.time)
+    pseudo.obs = fast.pseudo(Y, event = DELTA, tmax = evaluate.time, type = "mean")
   } else if (estimand.type == "SPCE") {
-    pseudo.obs = as.numeric(pseudosurv(Y, event = DELTA, tmax = evaluate.time)$pseudo)
+    pseudo.obs = fast.pseudo(Y, event = DELTA, tmax = evaluate.time, type = "surv")
   } else{
     stop("Undefined estimand")
   }
-  
+  print("calculate pseudo finished")
   ### Weighting Type
   if (weight.type == "IPW") {
     tilt.h = 1
