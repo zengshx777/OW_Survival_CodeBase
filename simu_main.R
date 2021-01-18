@@ -10,7 +10,9 @@ if (length(args) == 0) {
     eval(parse(text = args[[i]]))
   }
 }
-# good_overlap = 1; sample_size = 200; multi.arm = F; prop.hazard = T
+# good_overlap = 1; sample_size = 200; multi.arm = F; prop.hazard = T;dependent.censoring = T
+multi.arm=F; prop.hazard=F; good_overlap=2; sample_size=250; dependent.censoring=T
+
 truncate.ph = 50
 truncate.aft = 60
 
@@ -178,7 +180,8 @@ for (i in (1:n_simu)) {
     weight.type = "IPW",
     estimand.type = "ASCE",
     ps.threshold = NA,
-    alpha = alpha.arg
+    alpha = alpha.arg,
+    dependent.adjustment = dependent.censoring
   )
   ipw_est[i, 1] <- res.IPWC$tau
   ipw_se[i, 1] <- res.IPWC$se
@@ -191,7 +194,8 @@ for (i in (1:n_simu)) {
     var.method = 2,
     weight.type = "OW",
     estimand.type = "ASCE",
-    alpha = alpha.arg
+    alpha = alpha.arg,
+    dependent.adjustment = dependent.censoring
   )
   
   ow_est[i, 1] <- res.OW$tau
@@ -207,7 +211,8 @@ for (i in (1:n_simu)) {
     estimand.type = "RACE",
     ps.threshold = 0.03,
     alpha = alpha.arg,
-    evaluate.time = truncate
+    evaluate.time = truncate,
+    dependent.adjustment = dependent.censoring
   )
   ipw_est[i, 2] <- res.IPWC$tau
   ipw_se[i, 2] <- res.IPWC$se
@@ -221,7 +226,8 @@ for (i in (1:n_simu)) {
     weight.type = "OW",
     estimand.type = "RACE",
     alpha = alpha.arg,
-    evaluate.time = truncate
+    evaluate.time = truncate,
+    dependent.adjustment = dependent.censoring
   )
   ow_est[i, 2] <- res.OW$tau
   ow_se[i, 2] <- res.OW$se
@@ -236,7 +242,8 @@ for (i in (1:n_simu)) {
     estimand.type = "SPCE",
     ps.threshold = 0.03,
     alpha = alpha.arg,
-    evaluate.time = truncate
+    evaluate.time = truncate,
+    dependent.adjustment = dependent.censoring
   )
   ipw_est[i, 3] <- res.IPWC$tau
   ipw_se[i, 3] <- res.IPWC$se
@@ -250,7 +257,8 @@ for (i in (1:n_simu)) {
     weight.type = "OW",
     estimand.type = "SPCE",
     alpha = alpha.arg,
-    evaluate.time = truncate
+    evaluate.time = truncate,
+    dependent.adjustment = dependent.censoring
   )
   ow_est[i, 3] <- res.OW$tau
   ow_se[i, 3] <- res.OW$se

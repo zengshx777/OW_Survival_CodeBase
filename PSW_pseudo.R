@@ -1,7 +1,5 @@
-library(pseudo)
 library(nnet)
 library(mice)
-# library(rootSolve)
 library(numDeriv)
 library(survival)
 source("fast_pseudo_calculation.R")
@@ -16,7 +14,8 @@ PSW.pseudo <- function(Y,
                        evaluate.time = NA,
                        var.method = 1,
                        target.j = NA,
-                       ps.threshold = NA) {
+                       ps.threshold = NA,
+                       dependent.adjustment = F) {
   ############
   # Y: (vec) Vector of end time min(T,C)
   # Z: (vec) Vector of treatment arm, encoding from 0 to (J-1)
@@ -29,6 +28,7 @@ PSW.pseudo <- function(Y,
   # var.method: (int) type of variance calculation
   # target.j: (int) index for arm, ranging from 0 to (J-1), only used for ATT
   # ps.threshold: threshold for ps truncation 0.1 e.g., usually for IPW
+  # dependent.censoring: (bool): whether use the model counted for dependent censoring.
   ############
   
   ### Add intercept if not for the design matrix
@@ -79,15 +79,13 @@ PSW.pseudo <- function(Y,
       ))
     }
     Y = Y[keep.ind]
-    e = e[keep.ind,]
+    e = e[keep.ind, ]
     Z = Z[keep.ind]
-    X = X[keep.ind,]
+    X = X[keep.ind, ]
     DELTA = DELTA[keep.ind]
     ### Summary statistics recalculate
     N = length(Y)
   }
-  
-  eInv = 1 / e   # Inverse of PS
   
   if (estimand.type == "ASCE") {
     evaluate.time = (max(Y) + max(Y[Y != max(Y)])) / 2
@@ -97,18 +95,66 @@ PSW.pseudo <- function(Y,
   if (max(Y) < evaluate.time) {
     return (list(tau = NA, se = NA))
   }
+  if (dependent.adjustment) {
+    Censoring.DELTA = 1 - DELTA
+    censoring.model = coxph(Surv(Y, Censoring.DELTA) ~ X)
+    km.object = survfit(censoring.model, newdata = data.frame(X = X))
+    km.time = km.object$time
+    ind = unlist(lapply(
+      pmin(Y, evaluate.time),
+      FUN = function(x) {
+        max(which(x >= km.time))
+      }
+    ))
+    weight.prob = unlist(lapply(
+      1:N,
+      FUN = function(x) {
+        km.object$surv[ind[x], x]
+      }
+    ))
   
-  ### Pseudo Obs
-  if (estimand.type == "ASCE") {
-    pseudo.obs = fast.pseudo(Y, event = DELTA, type = "mean")
-  } else if (estimand.type == "RACE") {
-    pseudo.obs = fast.pseudo(Y, event = DELTA, tmax = evaluate.time, type = "mean")
-  } else if (estimand.type == "SPCE") {
-    pseudo.obs = fast.pseudo(Y, event = DELTA, tmax = evaluate.time, type = "surv")
+    if (estimand.type == "ASCE") {
+      V = Y
+    } else if (estimand.type == "RACE") {
+      V = pmin(Y, evaluate.time)
+    } else if (estimand.type == "SPCE") {
+      V = as.numeric(Y >= evaluate.time)
+    } else{
+      stop("Undefined estimand")
+    }
+    # truncation
+    keep.ind = which(weight.prob>=0.03)
+    V = V[keep.ind]
+    weight.prob = weight.prob[keep.ind]
+    Y = Y[keep.ind]
+    e = e[keep.ind, ]
+    Z = Z[keep.ind]
+    X = X[keep.ind, ]
+    DELTA = DELTA[keep.ind]
+    N = length(Y)
+    indicator = as.numeric((DELTA == 1) | (Y >= evaluate.time))
+    pseudo.obs = V * indicator / weight.prob
+    var.method = 3
   } else{
-    stop("Undefined estimand")
+    ### Pseudo Obs
+    if (estimand.type == "ASCE") {
+      pseudo.obs = fast.pseudo(Y, event = DELTA, type = "mean")
+    } else if (estimand.type == "RACE") {
+      pseudo.obs = fast.pseudo(Y,
+                               event = DELTA,
+                               tmax = evaluate.time,
+                               type = "mean")
+    } else if (estimand.type == "SPCE") {
+      pseudo.obs = fast.pseudo(Y,
+                               event = DELTA,
+                               tmax = evaluate.time,
+                               type = "surv")
+    } else{
+      stop("Undefined estimand")
+    }
   }
-  print("calculate pseudo finished")
+  eInv = 1 / e   # Inverse of PS
+  # print("calculate pseudo finished")
   ### Weighting Type
   if (weight.type == "IPW") {
     tilt.h = 1
@@ -120,6 +166,7 @@ PSW.pseudo <- function(Y,
     stop("Undefined weight type")
   }
   
+
   w = eInv * tilt.h # weight matrix w_ij
   J = max(Z) + 1   # Number of arms
   A = matrix(unlist(lapply(
@@ -358,7 +405,7 @@ PSW.pseudo <- function(Y,
   loglik = function(theta) {
     Theta = matrix(theta, ncol(X), ncol(A) - 1)
     Eta = X %*% Theta
-    ltheta = as.numeric(rowSums(A[,-1] * Eta) - log(1 + rowSums(exp(Eta))))
+    ltheta = as.numeric(rowSums(A[, -1] * Eta) - log(1 + rowSums(exp(Eta))))
     return(ltheta)
   }
   Sthetah = jacobian(loglik, thetah)

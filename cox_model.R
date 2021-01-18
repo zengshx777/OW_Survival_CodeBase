@@ -10,16 +10,20 @@ g.calculation <- function(km.object, end.time, type = 1) {
   diff.time.grid = c(diff(time.grid)) # Difference of time
   if (type == 1) {
     final.index = max(which(time.grid <= end.time))
+    final.index = min(final.index, nrow(surv.prob))
     return (mean(surv.prob[final.index,]))
   } else{
     if (!is.na(end.time)) {
       final.index = max(which(time.grid <= end.time))
       diff.time.grid.temp = diff.time.grid
       diff.time.grid.temp[final.index] = end.time - time.grid[final.index]
+      final.index = min(nrow(surv.prob),length(diff.time.grid.temp))
     } else{
       final.index = length(diff.time.grid)
       diff.time.grid.temp = diff.time.grid
+      final.index = min(nrow(surv.prob),length(diff.time.grid.temp))
     }
+
     output = mean(unlist(lapply(
       1:n.size,
       FUN = function(y) {

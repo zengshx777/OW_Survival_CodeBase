@@ -88,13 +88,24 @@ if (prop.hazard) {
   Survival_time_2 = exp(3.5 + 0.2 * (gamma.2 + X[, -1] %*% alpha) + random_simu)
 }
 # Censor time
-Censor_time = runif(sample_size, min = 0, max = 115)
+if(dependent.censoring){
+  lambda.c = 0.0001
+  v.c = 2.7
+  alpha.c = c(1, 0.5, -0.5, 0.5)  # The covariate and the treatment is defined on proportional hazard
+  c.hazard = as.vector(X[, -1] %*% alpha)
+  random_simu = runif(sample_size)
+  Censor_time = (-log(random_simu) / (lambda.c * exp(c.hazard))) ^ (1 / v.c)
+  # mean(Survival_time > Censor_time)
+}else{
+  Censor_time = runif(sample_size, min = 0, max = 115)
+  # mean(Survival_time > Censor_time)
+}
+
 # Censor_time=runif(sample_size,min=2000,max=2115)
 
 # Observed survival
 Censored = Survival_time > Censor_time
-Y = Survival_time
-Y[Censored] = Censor_time[Censored]
+Y = pmin(Survival_time, Censor_time)
 DELTA = 1 - Censored
 
 # Store true value on finite sample
