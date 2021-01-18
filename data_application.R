@@ -1,4 +1,4 @@
-#setwd("C:/Users/Shuxi ZENG/Dropbox/Fourth Year/OW_Survival/codebase/OW_Survival_CodeBase")
+setwd("C:/Users/Shuxi ZENG/Dropbox/Fourth Year/OW_Survival/codebase/OW_Survival_CodeBase")
 source("data_preprocessing.R")
 source("cox_model.R")
 source("PSW_pseudo.R")
@@ -138,16 +138,16 @@ if (id == 7){
     t.trunc = truncate.time,
     tmax = tmax
   )
-  
-  # res.cox.q = cox.q.model.fit(
-  #   Y,
-  #   DELTA,
-  #   X,
-  #   Z,
-  #   alpha = alpha.arg,
-  #   truncate =  truncate.time,
-  #   boot.time = 250
-  # )
+  round.Y = round(Y)
+  res.cox.q = cox.q.model.fit(
+    round.Y,
+    DELTA,
+    X,
+    Z,
+    alpha = alpha.arg,
+    truncate =  truncate.time,
+    boot.time = 250
+  )
   
   res.cox.msm = cox.msm.model.fit(
     Y,

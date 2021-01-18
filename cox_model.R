@@ -11,19 +11,17 @@ g.calculation <- function(km.object, end.time, type = 1) {
   if (type == 1) {
     final.index = max(which(time.grid <= end.time))
     final.index = min(final.index, nrow(surv.prob))
-    return (mean(surv.prob[final.index,]))
+    return (mean(surv.prob[final.index, ]))
   } else{
     if (!is.na(end.time)) {
       final.index = max(which(time.grid <= end.time))
       diff.time.grid.temp = diff.time.grid
       diff.time.grid.temp[final.index] = end.time - time.grid[final.index]
-      final.index = min(nrow(surv.prob),length(diff.time.grid.temp))
     } else{
       final.index = length(diff.time.grid)
       diff.time.grid.temp = diff.time.grid
-      final.index = min(nrow(surv.prob),length(diff.time.grid.temp))
     }
-
+    final.index = min(nrow(surv.prob), final.index)
     output = mean(unlist(lapply(
       1:n.size,
       FUN = function(y) {
@@ -50,7 +48,7 @@ cox.q.model.est <-
     )), byrow = T, ncol = J)
     # Delete intercept term
     if (all(X[, 1] == 1)) {
-      X = X[,-1]
+      X = X[, -1]
     }
     for (k in 1:(J - 1)) {
       nam <- paste("A", k, sep = ".")
@@ -62,11 +60,11 @@ cox.q.model.est <-
     cox_q_model = coxph(cox.formula, method = "breslow")
     A.treat = matrix(0, ncol = J, nrow = length(Y))
     A.treat[, which(alpha == 1)] = 1
-    treated_data = data.frame(cbind(X, A.treat[,-1]))
+    treated_data = data.frame(cbind(X, A.treat[, -1]))
     colnames(treated_data) = names(cox_q_model$coefficients)
     A.control = matrix(0, ncol = J, nrow = length(Y))
     A.control[, which(alpha == -1)] = 1
-    control_data = data.frame(cbind(X, A.control[,-1]))
+    control_data = data.frame(cbind(X, A.control[, -1]))
     colnames(control_data) = names(cox_q_model$coefficients)
     # G computation
     km.object.treated = survfit(cox_q_model, newdata = treated_data)
@@ -115,13 +113,13 @@ cox.q.model.fit <-
       b.id = sample(1:n.size, n.size, replace = T)
       b.Y = Y[b.id]
       b.DELTA = DELTA[b.id]
-      b.X = X[b.id, ]
+      b.X = X[b.id,]
       b.Z = Z[b.id]
       if (var(b.Z) == 0) {
         next
       }
-      boot.est[b, ] = cox.q.model.est(b.Y, b.DELTA, b.X, b.Z, alpha, truncate)
-      print(paste("== Bootstrap time",b,"=="))
+      boot.est[b,] = cox.q.model.est(b.Y, b.DELTA, b.X, b.Z, alpha, truncate)
+      print(paste("== Bootstrap time", b, "=="))
     }
     se = apply(boot.est, 2, sd, na.rm = T)
     names(point.est) = c("ASCE", "RACE", "SPCE")
@@ -137,7 +135,8 @@ msm.calculation <- function(km.object, end.time, type = 1) {
   diff.time.grid = c(diff(time.grid)) # Difference of time
   if (type == 1) {
     final.index = max(which(time.grid <= end.time))
-    return (surv.prob[final.index,])
+    final.index = min(final.index, nrow(surv.prob))
+    return (surv.prob[final.index, ])
   } else{
     if (!is.na(end.time)) {
       final.index = max(which(time.grid <= end.time))
@@ -147,6 +146,7 @@ msm.calculation <- function(km.object, end.time, type = 1) {
       final.index = length(diff.time.grid)
       diff.time.grid.temp = diff.time.grid
     }
+    final.index = min(nrow(surv.prob), final.index)
     output = unlist(lapply(
       1:levels,
       FUN = function(y) {
@@ -166,7 +166,7 @@ cox.msm.model.est <-
   function(Y, DELTA, X, Z, alpha = alpha, truncate) {
     # Delete intercept term
     if (all(X[, 1] == 1)) {
-      X = X[,-1]
+      X = X[, -1]
     }
     gps.model = multinom(Z ~ X,
                          maxit = 500,
@@ -195,7 +195,7 @@ cox.msm.model.est <-
     ), sep = "."), collapse = "+"), sep = ""))
     cox.msm.model = coxph(cox.formula, weights = s.weights, method = "breslow")
     A.unique = diag(rep(1, J))
-    A.unique = data.frame(A.unique[,-1])
+    A.unique = data.frame(A.unique[, -1])
     colnames(A.unique) = names(cox.msm.model$coefficients)
     km.object = survfit(cox.msm.model, newdata = A.unique)
     
@@ -224,13 +224,13 @@ cox.msm.model.fit <-
       b.id = sample(1:n.size, n.size, replace = T)
       b.Y = Y[b.id]
       b.DELTA = DELTA[b.id]
-      b.X = X[b.id,]
+      b.X = X[b.id, ]
       b.Z = Z[b.id]
       if (var(b.Z) == 0) {
         next
       }
-      boot.est[b,] = cox.msm.model.est(b.Y, b.DELTA, b.X, b.Z, alpha, truncate)
-      print(paste("== Bootstrap time",b,"=="))
+      boot.est[b, ] = cox.msm.model.est(b.Y, b.DELTA, b.X, b.Z, alpha, truncate)
+      print(paste("== Bootstrap time", b, "=="))
     }
     se = apply(boot.est, 2, sd, na.rm = T)
     names(point.est) = c("ASCE", "RACE", "SPCE")
