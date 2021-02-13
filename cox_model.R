@@ -38,8 +38,10 @@ g.calculation <- function(km.object, end.time, type = 1) {
 }
 ### Obtain point estimation from fitting Cox model
 cox.q.model.est <-
-  function(Y, DELTA, X, Z, alpha = c(-1, 1), truncate) {
+  function(Y, DELTA, X, Z, truncate) {
     J = max(Z) + 1   # Number of arms
+    mu.est.asce <- mu.est.race <- mu.est.spce <- rep(NA, J)
+    
     A = matrix(unlist(lapply(
       Z,
       FUN = function(x) {
@@ -58,44 +60,50 @@ cox.q.model.est <-
       J - 1
     ), sep = "."), collapse = "+"), sep = "+"))
     cox_q_model = coxph(cox.formula, method = "breslow")
-    A.treat = matrix(0, ncol = J, nrow = length(Y))
-    A.treat[, which(alpha == 1)] = 1
-    treated_data = data.frame(cbind(X, A.treat[, -1]))
-    colnames(treated_data) = names(cox_q_model$coefficients)
-    A.control = matrix(0, ncol = J, nrow = length(Y))
-    A.control[, which(alpha == -1)] = 1
-    control_data = data.frame(cbind(X, A.control[, -1]))
-    colnames(control_data) = names(cox_q_model$coefficients)
-    # G computation
-    km.object.treated = survfit(cox_q_model, newdata = treated_data)
-    km.object.control = survfit(cox_q_model, newdata = control_data)
+    alpha.matrix = matrix(0, ncol = (J - 1), nrow = length(Y))
     
-    point.est = rep(NA, 3)
-    point.est[1] =
-      g.calculation(km.object = km.object.treated,
-                    end.time = NA,
-                    type = 2) -
-      g.calculation(km.object = km.object.control,
-                    end.time = NA,
-                    type = 2)
+    temp.data = data.frame(cbind(X, alpha.matrix))
+    colnames(temp.data) = names(cox_q_model$coefficients)
+    km.object = survfit(cox_q_model, newdata = temp.data)
+    mu.est.asce[1] = g.calculation(km.object = km.object,
+                                   end.time = NA,
+                                   type = 2)
     
-    point.est[2] =
-      g.calculation(km.object = km.object.treated,
-                    end.time = truncate,
-                    type = 2) -
-      g.calculation(km.object = km.object.control,
-                    end.time = truncate,
-                    type = 2)
+    mu.est.race[1] = g.calculation(km.object = km.object,
+                                   end.time = truncate,
+                                   type = 2)
     
-    point.est[3] =
-      g.calculation(km.object = km.object.treated,
-                    end.time = truncate,
-                    type = 1) -
-      g.calculation(km.object = km.object.control,
-                    end.time = truncate,
-                    type = 1)
+    mu.est.spce[1] = g.calculation(km.object = km.object,
+                                   end.time = truncate,
+                                   type = 1)
     
-    return (point.est)
+    for (k in 1:(J - 1)) {
+      arm.matrix = alpha.matrix
+      arm.matrix[, k] = 1
+      temp.data = data.frame(cbind(X, arm.matrix))
+      colnames(temp.data) = names(cox_q_model$coefficients)
+      km.object = survfit(cox_q_model, newdata = temp.data)
+      mu.est.asce[k + 1] = g.calculation(km.object = km.object,
+                                         end.time = NA,
+                                         type = 2)
+      
+      mu.est.race[k + 1] = g.calculation(km.object = km.object,
+                                         end.time = truncate,
+                                         type = 2)
+      
+      mu.est.spce[k + 1] = g.calculation(km.object = km.object,
+                                         end.time = truncate,
+                                         type = 1)
+    }
+    ind.alpha = combn(J, 2)
+    point.est = matrix(NA, ncol = ncol(ind.alpha), nrow = 3)
+    for (k in 1:ncol(point.est)) {
+      point.est[1, k] = mu.est.asce[ind.alpha[2, k]] - mu.est.asce[ind.alpha[1, k]]
+      point.est[2, k] = mu.est.race[ind.alpha[2, k]] - mu.est.race[ind.alpha[1, k]]
+      point.est[3, k] = mu.est.spce[ind.alpha[2, k]] - mu.est.spce[ind.alpha[1, k]]
+    }
+    res = c(point.est[1,], point.est[2,], point.est[3,])
+    return (res)
   }
 ### Obtain point estimation and CI (bootstrap) from fitting Cox model
 cox.q.model.fit <-
@@ -103,11 +111,12 @@ cox.q.model.fit <-
            DELTA,
            X,
            Z,
-           alpha = c(-1, 1),
            truncate,
            boot.time = 250) {
-    point.est =  cox.q.model.est(Y, DELTA, X, Z, alpha, truncate)
-    boot.est = matrix(NA, ncol = 3, nrow = boot.time)
+    point.est =  cox.q.model.est(Y, DELTA, X, Z, truncate)
+    alpha.ind = combn(max(Z) + 1, 2)
+    comb.num = ncol(alpha.ind)
+    boot.est = matrix(NA, ncol = 3 * comb.num, nrow = boot.time)
     n.size = length(Y)
     for (b in 1:boot.time) {
       b.id = sample(1:n.size, n.size, replace = T)
@@ -118,13 +127,17 @@ cox.q.model.fit <-
       if (var(b.Z) == 0) {
         next
       }
-      boot.est[b,] = cox.q.model.est(b.Y, b.DELTA, b.X, b.Z, alpha, truncate)
-      print(paste("== Bootstrap time", b, "=="))
+      boot.est[b,] = cox.q.model.est(b.Y, b.DELTA, b.X, b.Z, truncate)
+      # print(paste("== Bootstrap time", b, "=="))
     }
     se = apply(boot.est, 2, sd, na.rm = T)
-    names(point.est) = c("ASCE", "RACE", "SPCE")
-    names(se) = c("ASCE", "RACE", "SPCE")
-    return (list(est = point.est, se = se))
+    names(point.est) = rep(c("ASCE", "RACE", "SPCE"), each = comb.num)
+    names(se) = rep(c("ASCE", "RACE", "SPCE"), each = comb.num)
+    return (list(
+      est = point.est,
+      se = se,
+      alpha.ind = alpha.ind
+    ))
   }
 ### Apply MSM computation from the Cox model
 msm.calculation <- function(km.object, end.time, type = 1) {
@@ -163,7 +176,7 @@ msm.calculation <- function(km.object, end.time, type = 1) {
 }
 ### Obtain MSM point estimation from the Cox model
 cox.msm.model.est <-
-  function(Y, DELTA, X, Z, alpha = alpha, truncate) {
+  function(Y, DELTA, X, Z, truncate) {
     # Delete intercept term
     if (all(X[, 1] == 1)) {
       X = X[, -1]
@@ -199,14 +212,19 @@ cox.msm.model.est <-
     colnames(A.unique) = names(cox.msm.model$coefficients)
     km.object = survfit(cox.msm.model, newdata = A.unique)
     
-    point.est = rep(NA, 3)
-    group.mean = msm.calculation(km.object, end.time = NA, type = 2)
-    point.est[1] = sum(group.mean * alpha)
-    group.mean = msm.calculation(km.object, end.time = truncate, type = 2)
-    point.est[2] = sum(group.mean * alpha)
-    group.mean = msm.calculation(km.object, end.time = truncate, type = 1)
-    point.est[3] = sum(group.mean * alpha)
-    return (point.est)
+    mu.est.asce = msm.calculation(km.object, end.time = NA, type = 2)
+    mu.est.race = msm.calculation(km.object, end.time = truncate, type = 2)
+    mu.est.spce = msm.calculation(km.object, end.time = truncate, type = 1)
+    
+    ind.alpha = combn(J, 2)
+    point.est = matrix(NA, ncol = ncol(ind.alpha), nrow = 3)
+    for (k in 1:ncol(point.est)) {
+      point.est[1, k] = mu.est.asce[ind.alpha[2, k]] - mu.est.asce[ind.alpha[1, k]]
+      point.est[2, k] = mu.est.race[ind.alpha[2, k]] - mu.est.race[ind.alpha[1, k]]
+      point.est[3, k] = mu.est.spce[ind.alpha[2, k]] - mu.est.spce[ind.alpha[1, k]]
+    }
+    res = c(point.est[1,], point.est[2,], point.est[3,])
+    return (res)
   }
 ### Obtain MSM point estimation and CI from the Cox model
 cox.msm.model.fit <-
@@ -214,11 +232,12 @@ cox.msm.model.fit <-
            DELTA,
            X,
            Z,
-           alpha = c(-1, 1),
            truncate,
            boot.time = 250) {
-    point.est =  cox.msm.model.est(Y, DELTA, X, Z, alpha, truncate)
-    boot.est = matrix(NA, ncol = 3, nrow = boot.time)
+    point.est =  cox.msm.model.est(Y, DELTA, X, Z, truncate)
+    alpha.ind = combn((max(Z) + 1), 2)
+    comb.num = ncol(alpha.ind)
+    boot.est = matrix(NA, ncol = 3 * comb.num, nrow = boot.time)
     n.size = length(Y)
     for (b in 1:boot.time) {
       b.id = sample(1:n.size, n.size, replace = T)
@@ -229,11 +248,15 @@ cox.msm.model.fit <-
       if (var(b.Z) == 0) {
         next
       }
-      boot.est[b, ] = cox.msm.model.est(b.Y, b.DELTA, b.X, b.Z, alpha, truncate)
-      print(paste("== Bootstrap time", b, "=="))
+      boot.est[b, ] = cox.msm.model.est(b.Y, b.DELTA, b.X, b.Z, truncate)
+      # print(paste("== Bootstrap time", b, "=="))
     }
     se = apply(boot.est, 2, sd, na.rm = T)
-    names(point.est) = c("ASCE", "RACE", "SPCE")
-    names(se) = c("ASCE", "RACE", "SPCE")
-    return (list(est = point.est, se = se))
+    names(point.est) = rep(c("ASCE", "RACE", "SPCE"), each = comb.num)
+    names(se) = rep(c("ASCE", "RACE", "SPCE"), each = comb.num)
+    return (list(
+      est = point.est,
+      se = se,
+      alpha.ind = alpha.ind
+    ))
   }

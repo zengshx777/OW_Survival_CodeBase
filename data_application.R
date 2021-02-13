@@ -68,7 +68,7 @@ if (id == 3) {
     Z,
     DELTA,
     X,
-    var.method = approx.var,
+    var.method = 3,
     weight.type = "IPW",
     estimand.type = "RACE",
     ps.threshold = 0.03,

@@ -109,20 +109,70 @@ DELTA = dat$death
 # adjust for treatment indicator to be 0:(J-1)
 Z = as.numeric(dat$trx)-1
 
-# Estimate generalized propensity scores with natural cubic splines on cont vars
-# gps.model <- trx ~ ns(age,df=4) + ns(psa,df=4) + as.factor(race) + as.factor(spanish) + 
-#   as.factor(insurance) + as.factor(income) + as.factor(education) + as.factor(deyo) + 
+# ## Some naive analysis
+# # Estimate generalized propensity scores with natural cubic splines on cont vars
+# gps.model <- trx ~ ns(age,df=4) + ns(psa,df=4) + as.factor(race) + as.factor(spanish) +
+#   as.factor(insurance) + as.factor(income) + as.factor(education) + as.factor(deyo) +
 #   as.factor(gs) + as.factor(tstage) + as.factor(dyearcat)
-# 
-# bal.mult<-SumStat(ps.formula=gps.model, weight=c("IPW","overlap"), data=dat)
 
-# check GPS distribution
-# pdf("GPS_distributions.pdf", width = 7, height = 7, paper = "special")
-# par(mar=c(5.1, 6.1, 4.1, 2.1))
+
+gps.model <- trx ~ age + psa + as.factor(race) + as.factor(spanish) +
+  as.factor(insurance) + as.factor(income) + as.factor(education) + as.factor(deyo) +
+  as.factor(gs) + as.factor(tstage) + as.factor(dyearcat)
 # 
-# plot(bal.mult, type = "density")
-# 
+bal.mult<-SumStat(ps.formula=gps.model, weight=c("IPW","overlap"), data=dat)
+
+pdf("GPS_plot.pdf",width=12,height=4)
+par(mfrow=c(1,3))
+plot(density(bal.mult$propensity[Z==0,1]),col="red",xlab = "Estimated GPS",bty="n",
+     main="Propensity for RP", lwd=2,yaxt='n')
+lines(density(bal.mult$propensity[Z==1,1]),col="blue", lwd=2)
+lines(density(bal.mult$propensity[Z==2,1]),col="green",lwd=2)
+
+plot(density(bal.mult$propensity[Z==0,2]),col="red",xlab = "Estimated GPS",bty="n",
+     main="Propensity for EBRT+AD", lwd=2,yaxt='n')
+lines(density(bal.mult$propensity[Z==1,2]),col="blue", lwd=2)
+lines(density(bal.mult$propensity[Z==2,2]),col="green",lwd=2)
+
+plot(density(bal.mult$propensity[Z==0,3]),col="red",xlab = "Estimated GPS",bty="n",
+     main="Propensity for EBRT+brachy±AD", lwd=2, yaxt='n',ylim=c(0,20))
+lines(density(bal.mult$propensity[Z==1,3]),col="blue", lwd=2)
+lines(density(bal.mult$propensity[Z==2,3]),col="green",lwd=2)
+legend("topright",legend=c("RP","EBRT+AD","EBRT+brachy±AD"),col=c("red","blue","green"),lwd=2)
+dev.off()
+
+# pdf("binary_ps.pdf",width=6,height=5)
+# plot(density(bal.mult$propensity[Z==0,2]),col="red",xlab = "Estimated PS",bty="n",
+#      main="Propensity for receving EBRT+AD", lwd=2,yaxt='n')
+# lines(density(bal.mult$propensity[Z==1,2]),col="blue", lwd=2)
+# legend("topright",legend=c("RP","EBRT+AD"),col=c("red","blue"),lwd=2)
 # dev.off()
+
+# # output_table = NULL
+# output_table = cbind(bal.mult$unweighted.sumstat$mres%*%(table(Z)/sum(table(Z))),
+#   bal.mult$unweighted.sumstat$mres,
+# apply(bal.mult$unweighted.sumstat$ASD.unweighted.var,1,FUN = function(x){max(abs(x))}),
+# apply(bal.mult$IPW.sumstat$ASD.unweighted.var,1,FUN = function(x){max(abs(x))}),
+# apply(bal.mult$overlap.sumstat$ASD.unweighted.var,1,FUN = function(x){max(abs(x))}))
+# 
+# output_table = cbind(bal.mult$unweighted.sumstat$mres%*%(table(Z)),
+#                      bal.mult$unweighted.sumstat$mres[,1]*table(Z)[1],
+#                      bal.mult$unweighted.sumstat$mres[,2]*table(Z)[2],
+#                      bal.mult$unweighted.sumstat$mres[,3]*table(Z)[3],
+#                      apply(bal.mult$unweighted.sumstat$ASD.unweighted.var,1,FUN = function(x){max(abs(x))}),
+#                      apply(bal.mult$IPW.sumstat$ASD.unweighted.var,1,FUN = function(x){max(abs(x))}),
+#                      apply(bal.mult$overlap.sumstat$ASD.unweighted.var,1,FUN = function(x){max(abs(x))}))
+# 
+# library(xtable)
+# xtable(output_table,digits = c(0,0,0,0,0,3,3,3))
+# 
+# # check GPS distribution
+pdf("GPS_distributions.pdf", width = 7, height = 7, paper = "special")
+par(mar=c(5.1, 6.1, 4.1, 2.1))
+par(mfrow=c(3,1))
+plot(bal.mult, type = "density")
+
+dev.off()
 # 
 # # check balance: it looks like IPW does a good job in balancing covariates based on the 0.1 threshold
 # #                but OW should provide more efficient results
@@ -132,10 +182,10 @@ Z = as.numeric(dat$trx)-1
 # plot(bal.mult, metric = "PSD")
 # 
 # dev.off()
-
-# #possible subsetting
-# #dats<- filter(dat, (trx==3 & hormone==1) | (trx==2 & totdose>=7920 & regdose != 99999 & boostdose !=99999) )
 # 
+# #possible subsetting
+# dats<- filter(dat, (trx==3 & hormone==1) | (trx==2 & totdose>=7920 & regdose != 99999 & boostdose !=99999) )
+# #
 # # somewhat naive analysis; i.e. fitting weighted Cox models
 # library(survey)
 # 
@@ -158,25 +208,36 @@ Z = as.numeric(dat$trx)-1
 # 
 # # All pairwise CIs exclude zero with OW on the HR scale!
 # # Estimand on Hazard Ratio
-# x <- summary(cox_Overlap)$coef
+# x <- summary(cox)$coef
 # out <- matrix(NA,3,3)
-# rownames(out) <- c("3 vs 1", "2 vs 1", "2 vs 3")
+# rownames(out) <- c("2 vs 1", "3 vs 1", "2 vs 3")
 # colnames(out) <- c("HR", "LCL", "UCL")
 # out[1,] <- exp(c(x[1,1], x[1,1]-qnorm(0.975)*x[1,3], x[1,1]+qnorm(0.975)*x[1,3]))
 # out[2,] <- exp(c(x[2,1], x[2,1]-qnorm(0.975)*x[2,3], x[2,1]+qnorm(0.975)*x[2,3]))
-# out[3,] <- exp(c(x[1,1]-x[2,1], 
-#                  (x[1,1]-x[2,1])-qnorm(0.975)*sqrt(t(c(1,-1))%*%vcov(cox_Overlap)%*%c(1,-1)), 
+# out[3,] <- exp(c(x[1,1]-x[2,1],
+#                  (x[1,1]-x[2,1])-qnorm(0.975)*sqrt(t(c(1,-1))%*%vcov(cox_Overlap)%*%c(1,-1)),
+#                  (x[1,1]-x[2,1])+qnorm(0.975)*sqrt(t(c(1,-1))%*%vcov(cox_Overlap)%*%c(1,-1))))
+# round(out,2)
+# 
+# x <- summary(cox_Overlap)$coef
+# out <- matrix(NA,3,3)
+# rownames(out) <- c("2 vs 1", "3 vs 1", "2 vs 3")
+# colnames(out) <- c("HR", "LCL", "UCL")
+# out[1,] <- exp(c(x[1,1], x[1,1]-qnorm(0.975)*x[1,3], x[1,1]+qnorm(0.975)*x[1,3]))
+# out[2,] <- exp(c(x[2,1], x[2,1]-qnorm(0.975)*x[2,3], x[2,1]+qnorm(0.975)*x[2,3]))
+# out[3,] <- exp(c(x[1,1]-x[2,1],
+#                  (x[1,1]-x[2,1])-qnorm(0.975)*sqrt(t(c(1,-1))%*%vcov(cox_Overlap)%*%c(1,-1)),
 #                  (x[1,1]-x[2,1])+qnorm(0.975)*sqrt(t(c(1,-1))%*%vcov(cox_Overlap)%*%c(1,-1))))
 # round(out,2)
 # 
 # x <- summary(cox_IPW)$coef
 # out <- matrix(NA,3,3)
-# rownames(out) <- c("3 vs 1", "2 vs 1", "2 vs 3")
+# rownames(out) <- c("2 vs 1", "3 vs 1", "2 vs 3")
 # colnames(out) <- c("HR", "LCL", "UCL")
 # out[1,] <- exp(c(x[1,1], x[1,1]-qnorm(0.975)*x[1,3], x[1,1]+qnorm(0.975)*x[1,3]))
 # out[2,] <- exp(c(x[2,1], x[2,1]-qnorm(0.975)*x[2,3], x[2,1]+qnorm(0.975)*x[2,3]))
-# out[3,] <- exp(c(x[1,1]-x[2,1], 
-#                  (x[1,1]-x[2,1])-qnorm(0.975)*sqrt(t(c(1,-1))%*%vcov(cox_IPW)%*%c(1,-1)), 
+# out[3,] <- exp(c(x[1,1]-x[2,1],
+#                  (x[1,1]-x[2,1])-qnorm(0.975)*sqrt(t(c(1,-1))%*%vcov(cox_IPW)%*%c(1,-1)),
 #                  (x[1,1]-x[2,1])+qnorm(0.975)*sqrt(t(c(1,-1))%*%vcov(cox_IPW)%*%c(1,-1))))
 # round(out,2)
 

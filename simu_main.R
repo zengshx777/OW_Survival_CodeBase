@@ -1,4 +1,4 @@
-# setwd("C:/Users/Shuxi ZENG/Dropbox/Fourth Year/OW_Survival/codebase/OW_Survival_CodeBase")
+setwd("C:/Users/Shuxi ZENG/Dropbox/Fourth Year/OW_Survival/codebase/OW_Survival_CodeBase")
 # setwd("~/OW_Survival/Codebase/OW_Survival_CodeBase")
 
 rm(list = ls())
@@ -11,31 +11,33 @@ if (length(args) == 0) {
   }
 }
 # good_overlap = 1; sample_size = 200; multi.arm = F; prop.hazard = T;dependent.censoring = T
-multi.arm=F; prop.hazard=F; good_overlap=2; sample_size=250; dependent.censoring=T
+multi.arm=T; prop.hazard=F; good_overlap=1; sample_size=600; dependent.censoring=F
 
 truncate.ph = 50
 truncate.aft = 60
 
 n_simu = 200
-n_mc = 100000
+n_mc = 10000
 
-mao.method = T
+# mao.method = T
 cox.q.method = T
 cox.msm.method = T
-
+by.group.pseudo = T
 library(MASS)
 library(mvtnorm)
 source("cox_model.R")
 source("PSW_pseudo.R")
-source("Mao_Method_func.R")
+#source("Mao_Method_func.R")
 source("simu_utils.R")
+source("AIPW_pseudo.R")
+source("pseudo_G.R")
 set.seed(2020)
 
-if (multi.arm) {
-  alpha.arg = c(-1, 0, 1)
-} else{
-  alpha.arg = c(-1, 1)
-}
+# if (multi.arm) {
+#   alpha.arg = c(-1, 0, 1)
+# } else{
+#   alpha.arg = c(-1, 1)
+# }
 
 #########
 ######### Use MC to approximate true
@@ -125,40 +127,44 @@ for (i in 1:n_mc) {
   
   # truncate=min(quantile(Survival_time_1[Z==1],0.75),quantile(Survival_time_0[Z==0],0.75))
   tilt.h = 1 / rowSums(1 / soft.max)
-  if (!multi.arm) {
-    true_est[i, 1] = mean(Survival_time_1) - mean(Survival_time_0)
-    true_est_ow[i, 1] = sum((Survival_time_1 - Survival_time_0) * tilt.h) /
-      sum(tilt.h)
-    true_est[i, 3] = mean(Survival_time_1 > truncate) - mean(Survival_time_0 >
-                                                               truncate)
-    true_est_ow[i, 3] = sum((
-      as.numeric(Survival_time_1 > truncate) - as.numeric(Survival_time_0 > truncate)
-    ) * tilt.h) / sum(tilt.h)
-    
-    Survival_time_1[Survival_time_1 > truncate] = truncate
-    Survival_time_0[Survival_time_0 > truncate] = truncate
-    true_est[i, 2] = mean(Survival_time_1) - mean(Survival_time_0)
-    true_est_ow[i, 2] = sum((Survival_time_1 - Survival_time_0) * tilt.h) /
-      sum(tilt.h)
-  } else{
-    true_est[i, 1] = mean(Survival_time_2) - mean(Survival_time_0)
-    true_est_ow[i, 1] = sum((Survival_time_2 - Survival_time_0) * tilt.h) /
-      sum(tilt.h)
-    
-    true_est[i, 3] = mean(Survival_time_2 > truncate) - mean(Survival_time_0 >
-                                                               truncate)
-    true_est_ow[i, 3] = sum((
-      as.numeric(Survival_time_2 > truncate) - as.numeric(Survival_time_0 > truncate)
-    ) * tilt.h) / sum(tilt.h)
-    
-    Survival_time_2[Survival_time_2 > truncate] = truncate
-    Survival_time_0[Survival_time_0 > truncate] = truncate
-    true_est[i, 2] = mean(Survival_time_2) - mean(Survival_time_0)
-    true_est_ow[i, 2] = sum((Survival_time_2 - Survival_time_0) * tilt.h) /
-      sum(tilt.h)
-  }
+  true_est[i, 1] = mean(Survival_time_1) - mean(Survival_time_0)
+  true_est[i, 2] = mean(Survival_time_2) - mean(Survival_time_0)
+  true_est[i, 3] = mean(Survival_time_2) - mean(Survival_time_1)
   
+  true_est[i, 4] = mean(pmin(Survival_time_1,truncate)) - mean(pmin(Survival_time_0,truncate))
+  true_est[i, 5] = mean(pmin(Survival_time_2,truncate)) - mean(pmin(Survival_time_0,truncate))
+  true_est[i, 6] = mean(pmin(Survival_time_2,truncate)) - mean(pmin(Survival_time_1,truncate))
   
+  true_est[i, 7] =  mean(Survival_time_1 > truncate) - mean(Survival_time_0 >
+                                                                    truncate)
+  true_est[i, 8] =  mean(Survival_time_2 > truncate) - mean(Survival_time_0 >
+                                                                    truncate)
+  true_est[i, 9] =  mean(Survival_time_2 > truncate) - mean(Survival_time_1 >
+                                                                    truncate)
+
+  true_est_ow[i, 1] = sum((Survival_time_1 - Survival_time_0) * tilt.h) /
+    sum(tilt.h)
+  true_est_ow[i, 2] = sum((Survival_time_2 - Survival_time_0) * tilt.h) /
+    sum(tilt.h)
+  true_est_ow[i, 3] = sum((Survival_time_2 - Survival_time_1) * tilt.h) /
+    sum(tilt.h)
+  
+  true_est_ow[i, 4] = sum((pmin(Survival_time_1, truncate) - pmin(Survival_time_0, truncate)) * tilt.h) /
+    sum(tilt.h)
+  true_est_ow[i, 5] = sum((pmin(Survival_time_2, truncate) - pmin(Survival_time_0, truncate)) * tilt.h) /
+    sum(tilt.h)
+  true_est_ow[i, 6] = sum((pmin(Survival_time_2, truncate) - pmin(Survival_time_1, truncate)) * tilt.h) /
+    sum(tilt.h)
+  
+  true_est_ow[i, 7] = sum((
+    as.numeric(Survival_time_1 > truncate) - as.numeric(Survival_time_0 > truncate)
+  ) * tilt.h) / sum(tilt.h)
+  true_est_ow[i, 8] = sum((
+    as.numeric(Survival_time_2 > truncate) - as.numeric(Survival_time_0 > truncate)
+  ) * tilt.h) / sum(tilt.h)
+  true_est_ow[i, 9] = sum((
+    as.numeric(Survival_time_2 > truncate) - as.numeric(Survival_time_1 > truncate)
+  ) * tilt.h) / sum(tilt.h)
   
   if (i %% 5000 == 0)
   {
@@ -169,7 +175,179 @@ for (i in 1:n_mc) {
 
 for (i in (1:n_simu)) {
   source("simu_data_gen.R")
+
+  res.pseudo.g=G.pseudo(
+    Y,
+    Z,
+    DELTA,
+    X,
+    estimand.type = "ASCE",
+    dependent.adjustment = dependent.censoring
+  )
   
+  res.pseudo.g=G.pseudo(
+    Y,
+    Z,
+    DELTA,
+    X,
+    estimand.type = "RACE",
+    evaluate.time = truncate,
+    dependent.adjustment = dependent.censoring
+  )
+  
+  res.pseudo.g=G.pseudo(
+    Y,
+    Z,
+    DELTA,
+    X,
+    estimand.type = "SPCE",
+    evaluate.time = truncate,
+    dependent.adjustment = dependent.censoring
+  )
+  
+  
+  res.AIPW.IPW = AIPW.pseudo(
+    Y,
+    Z,
+    DELTA,
+    X,
+    weight.type = "IPW",
+    estimand.type = "SPCE",
+    evaluate.time = 60,
+    dependent.adjustment = dependent.censoring
+  )
+  # 
+  ### PS Pseudo approach
+  {
+  res.IPWC = PSW.pseudo(
+    Y,
+    Z,
+    DELTA,
+    X,
+    var.method = 2,
+    weight.type = "IPW",
+    ps.threshold = 0.03,
+    estimand.type = "ASCE",
+    dependent.adjustment = dependent.censoring
+  )
+  if(multi.arm){
+    ipw_est[i, 1:3] <- res.IPWC$tau
+    ipw_se[i, 1:3] <- res.IPWC$se
+  }else{
+    ipw_est[i, 1:2] <- res.IPWC$tau
+    ipw_se[i, 1:2] <- res.IPWC$se
+  }
+
+  res.OW = PSW.pseudo(
+    Y,
+    Z,
+    DELTA,
+    X,
+    var.method = 2,
+    weight.type = "OW",
+    estimand.type = "ASCE",
+    dependent.adjustment = dependent.censoring
+  )
+  if(multi.arm){
+    ow_est[i, 1:3] <- res.OW$tau
+    ow_se[i, 1:3] <- res.OW$se
+  }else{
+    ow_est[i, 1:2] <- res.OW$tau
+    ow_se[i, 1:2] <- res.OW$se
+  }
+
+  
+  res.IPWC = PSW.pseudo(
+    Y,
+    Z,
+    DELTA,
+    X,
+    var.method = 2,
+    weight.type = "IPW",
+    estimand.type = "RACE",
+    ps.threshold = 0.03,
+    evaluate.time = truncate,
+    dependent.adjustment = dependent.censoring
+  )
+  if(multi.arm){
+    ipw_est[i, 4:6] <- res.IPWC$tau
+    ipw_se[i, 4:6] <- res.IPWC$se
+  }else{
+    ipw_est[i, 4:5] <- res.IPWC$tau
+    ipw_se[i, 4:5] <- res.IPWC$se
+  }
+
+  
+  res.OW = PSW.pseudo(
+    Y,
+    Z,
+    DELTA,
+    X,
+    var.method = 2,
+    weight.type = "OW",
+    estimand.type = "RACE",
+    evaluate.time = truncate,
+    dependent.adjustment = dependent.censoring
+  )
+  if(multi.arm){
+    ow_est[i, 4:6] <- res.OW$tau
+    ow_se[i, 4:6] <- res.OW$se
+  }else{
+    ow_est[i, 4:5] <- res.OW$tau
+    ow_se[i, 4:5] <- res.OW$se
+  }
+
+  
+  res.IPWC = PSW.pseudo(
+    Y,
+    Z,
+    DELTA,
+    X,
+    var.method = 2,
+    weight.type = "IPW",
+    estimand.type = "SPCE",
+    ps.threshold = 0.03,
+    evaluate.time = truncate,
+    dependent.adjustment = dependent.censoring
+  )
+  if(multi.arm){
+    ipw_est[i, 7:9] <- res.IPWC$tau
+    ipw_se[i, 7:9] <- res.IPWC$se
+  }else{
+    ipw_est[i, 7:8] <- res.IPWC$tau
+    ipw_se[i, 7:8] <- res.IPWC$se
+  }
+
+  
+  res.OW = PSW.pseudo(
+    Y,
+    Z,
+    DELTA,
+    X,
+    var.method = 2,
+    weight.type = "OW",
+    estimand.type = "SPCE",
+    evaluate.time = truncate,
+    dependent.adjustment = dependent.censoring
+  )
+  if(multi.arm){
+    ow_est[i, 7:9] <- res.OW$tau
+    ow_se[i, 7:9] <- res.OW$se
+  }else{
+    ow_est[i, 7:8] <- res.OW$tau
+    ow_se[i, 7:8] <- res.OW$se
+  }}
+
+  valid = T
+  if(by.group.pseudo){
+    # if we use by group pseudo, then we need to check whether the evaluate point is valid  
+    for (k in 0:max(Z)){
+      if (max(Y[Z==k][DELTA[Z==k]==1])<truncate){
+        not.valid=F
+      }
+    }}
+  
+  if(by.group.pseudo&&valid){
   ### PS Pseudo approach
   res.IPWC = PSW.pseudo(
     Y,
@@ -178,13 +356,18 @@ for (i in (1:n_simu)) {
     X,
     var.method = 2,
     weight.type = "IPW",
+    ps.threshold = 0.03,
     estimand.type = "ASCE",
-    ps.threshold = NA,
-    alpha = alpha.arg,
+    by.group.version = T,
     dependent.adjustment = dependent.censoring
   )
-  ipw_est[i, 1] <- res.IPWC$tau
-  ipw_se[i, 1] <- res.IPWC$se
+  if(multi.arm){
+    ipw_est_by_group[i, 1:3] <- res.IPWC$tau
+    ipw_se_by_group[i, 1:3] <- res.IPWC$se
+  }else{
+    ipw_est_by_group[i, 1:2] <- res.IPWC$tau
+    ipw_se_by_group[i, 1:2] <- res.IPWC$se
+  }
   
   res.OW = PSW.pseudo(
     Y,
@@ -194,12 +377,17 @@ for (i in (1:n_simu)) {
     var.method = 2,
     weight.type = "OW",
     estimand.type = "ASCE",
-    alpha = alpha.arg,
+    by.group.version = T,
     dependent.adjustment = dependent.censoring
   )
+  if(multi.arm){
+    ow_est_by_group[i, 1:3] <- res.OW$tau
+    ow_se_by_group[i, 1:3] <- res.OW$se
+  }else{
+    ow_est_by_group[i, 1:2] <- res.OW$tau
+    ow_se_by_group[i, 1:2] <- res.OW$se
+  }
   
-  ow_est[i, 1] <- res.OW$tau
-  ow_se[i, 1] <- res.OW$se
   
   res.IPWC = PSW.pseudo(
     Y,
@@ -210,12 +398,18 @@ for (i in (1:n_simu)) {
     weight.type = "IPW",
     estimand.type = "RACE",
     ps.threshold = 0.03,
-    alpha = alpha.arg,
     evaluate.time = truncate,
+    by.group.version = T,
     dependent.adjustment = dependent.censoring
   )
-  ipw_est[i, 2] <- res.IPWC$tau
-  ipw_se[i, 2] <- res.IPWC$se
+  if(multi.arm){
+    ipw_est_by_group[i, 4:6] <- res.IPWC$tau
+    ipw_se_by_group[i, 4:6] <- res.IPWC$se
+  }else{
+    ipw_est_by_group[i, 4:5] <- res.IPWC$tau
+    ipw_se_by_group[i, 4:5] <- res.IPWC$se
+  }
+  
   
   res.OW = PSW.pseudo(
     Y,
@@ -225,12 +419,18 @@ for (i in (1:n_simu)) {
     var.method = 2,
     weight.type = "OW",
     estimand.type = "RACE",
-    alpha = alpha.arg,
     evaluate.time = truncate,
+    by.group.version = T,
     dependent.adjustment = dependent.censoring
   )
-  ow_est[i, 2] <- res.OW$tau
-  ow_se[i, 2] <- res.OW$se
+  if(multi.arm){
+    ow_est_by_group[i, 4:6] <- res.OW$tau
+    ow_se_by_group[i, 4:6] <- res.OW$se
+  }else{
+    ow_est_by_group[i, 4:5] <- res.OW$tau
+    ow_se_by_group[i, 4:5] <- res.OW$se
+  }
+  
   
   res.IPWC = PSW.pseudo(
     Y,
@@ -241,12 +441,18 @@ for (i in (1:n_simu)) {
     weight.type = "IPW",
     estimand.type = "SPCE",
     ps.threshold = 0.03,
-    alpha = alpha.arg,
     evaluate.time = truncate,
+    by.group.version = T,
     dependent.adjustment = dependent.censoring
   )
-  ipw_est[i, 3] <- res.IPWC$tau
-  ipw_se[i, 3] <- res.IPWC$se
+  if(multi.arm){
+    ipw_est_by_group[i, 7:9] <- res.IPWC$tau
+    ipw_se_by_group[i, 7:9] <- res.IPWC$se
+  }else{
+    ipw_est_by_group[i, 7:8] <- res.IPWC$tau
+    ipw_se_by_group[i, 7:8] <- res.IPWC$se
+  }
+  
   
   res.OW = PSW.pseudo(
     Y,
@@ -256,159 +462,120 @@ for (i in (1:n_simu)) {
     var.method = 2,
     weight.type = "OW",
     estimand.type = "SPCE",
-    alpha = alpha.arg,
     evaluate.time = truncate,
+    by.group.version = T,
     dependent.adjustment = dependent.censoring
   )
-  ow_est[i, 3] <- res.OW$tau
-  ow_se[i, 3] <- res.OW$se
-  
-  # {
-  #   # ASCE
-  #   pseudo_obs=numeric(length(Y))
-  #   pseudo_obs[Z==1]=pseudomean(Y[Z==1],event=delta[Z==1])
-  #   pseudo_obs[Z==0]=pseudomean(Y[Z==0],event=delta[Z==0])
-  #   # IPW
-  #   res.IPWC <- IPWC(y.all=pseudo_obs, z.all=Z, W.all=X, q.all=0)
-  #   ipw_est_by_group[i,1] <- res.IPWC$TAU
-  #   ipw_se_by_group[i,1]<- res.IPWC$SE
-  #   # OW
-  #   res.OW <- OW(y=pseudo_obs, z=Z, W=X)
-  #   ow_est_by_group[i,1] <- res.OW$tau
-  #   ow_se_by_group[i,1] <- res.OW$se
-  #
-  #   # RACE
-  #   pseudo_obs=numeric(length(Y))
-  #   pseudo_obs[Z==1]=pseudomean(Y[Z==1],event=delta[Z==1],tmax=truncate)
-  #   pseudo_obs[Z==0]=pseudomean(Y[Z==0],event=delta[Z==0],tmax=truncate)
-  #   # IPW
-  #   res.IPWC <- IPWC(y.all=pseudo_obs, z.all=Z, W.all=X, q.all=0)
-  #   ipw_est_by_group[i,2] <- res.IPWC$TAU
-  #   ipw_se_by_group[i,2]<- res.IPWC$SE
-  #   # OW
-  #   res.OW <- OW(y=pseudo_obs, z=Z, W=X)
-  #   ow_est_by_group[i,2] <- res.OW$tau
-  #   ow_se_by_group[i,2] <- res.OW$se
-  #
-  #   # SPCE
-  #   pseudo_obs=numeric(length(Y))
-  #   pseudo_obs_obj=pseudosurv(Y[Z==1],event=delta[Z==1],tmax=truncate)
-  #   pseudo_obs[Z==1]=pseudo_obs_obj$pseudo
-  #   pseudo_obs_obj=pseudosurv(Y[Z==0],event=delta[Z==0],tmax=truncate)
-  #   pseudo_obs[Z==0]=pseudo_obs_obj$pseudo
-  #
-  #   # IPW
-  #   res.IPWC <- IPWC(y.all=pseudo_obs, z.all=Z, W.all=X, q.all=0)
-  #   ipw_est_by_group[i,3] <- res.IPWC$TAU
-  #   ipw_se_by_group[i,3]<- res.IPWC$SE
-  #   # OW
-  #   res.OW <- OW(y=pseudo_obs, z=Z, W=X)
-  #   ow_est_by_group[i,3] <- res.OW$tau
-  #   ow_se_by_group[i,3] <- res.OW$se
-  #
-  #
-  # }
+  if(multi.arm){
+    ow_est_by_group[i, 7:9] <- res.OW$tau
+    ow_se_by_group[i, 7:9] <- res.OW$se
+  }else{
+    ow_est_by_group[i, 7:8] <- res.OW$tau
+    ow_se_by_group[i, 7:8] <- res.OW$se
+  }
+}
+
   
   ### Mao's method
-  if (mao.method) {
-    if (!multi.arm) {
-      tmax = min(max(Y[Z == 1]), max(Y[Z == 0]))
-      ## IPW based
-      res.mao.IPW = estimand_analysis(
-        X = X[, -1],
-        Z = Z,
-        Y = Y,
-        delta = DELTA,
-        weight.type = "IPW",
-        t.trunc = truncate,
-        tmax = tmax
-      )
-      ## OW based
-      res.mao.OW = estimand_analysis(
-        X = X[, -1],
-        Z = Z,
-        Y = Y,
-        delta = DELTA,
-        weight.type = "OVERLAP",
-        t.trunc = truncate,
-        tmax = tmax
-      )
-      ## MW based
-      res.mao.MW = estimand_analysis(
-        X = X[, -1],
-        Z = Z,
-        Y = Y,
-        delta = DELTA,
-        weight.type = "MW",
-        t.trunc = truncate,
-        tmax = tmax
-      )
-      ## Unweighted Cox
-      # res.mao.UW = estimand_analysis(
-      #   X = X[, -1],
-      #   Z = Z,
-      #   Y = Y,
-      #   delta = DELTA,
-      #   weight.type = "UNWEIGHT",
-      #   t.trunc = truncate,
-      #   tmax = tmax
-      # )
-    } else{
-      tmax = min(max(Y[Z == 0]), max(Y[Z == 2]))
-      X.aug = cbind(X, as.numeric(Z == 1))
-      colnames(X.aug) = c("X0", "X1", "X2", "X3", "X4", "Z01")
-      Z.aug = as.numeric(Z == 2)
-      ## IPW based
-      res.mao.IPW = estimand_analysis(
-        X = X.aug[, -1],
-        Z = Z.aug,
-        Y = Y,
-        delta = DELTA,
-        weight.type = "IPW",
-        t.trunc = truncate,
-        tmax = tmax
-      )
-      ## OW based
-      res.mao.OW = estimand_analysis(
-        X = X.aug[, -1],
-        Z = Z.aug,
-        Y = Y,
-        delta = DELTA,
-        weight.type = "OVERLAP",
-        t.trunc = truncate,
-        tmax = tmax
-      )
-      ## MW based
-      res.mao.MW = estimand_analysis(
-        X = X.aug[, -1],
-        Z = Z.aug,
-        Y = Y,
-        delta = DELTA,
-        weight.type = "MW",
-        t.trunc = truncate,
-        tmax = tmax
-      )
-      ## Unweighted Cox
-      # res.mao.UW = estimand_analysis(
-      #   X = X.aug[, -1],
-      #   Z = Z.aug,
-      #   Y = Y,
-      #   delta = DELTA,
-      #   weight.type = "UNWEIGHT",
-      #   t.trunc = truncate,
-      #   tmax = tmax
-      # )
-    }
-    ipw_est_mao[i, ] = res.mao.IPW$ans[, 2]
-    ow_est_mao[i, ] = res.mao.OW$ans[, 2]
-    mw_est_mao[i, ] = res.mao.MW$ans[, 2]
-    # uw_est_mao[i, ] = res.mao.UW$ans[, 2]
-    
-    ipw_se_mao[i, ] = res.mao.IPW$ans[, 3]
-    ow_se_mao[i, ] = res.mao.OW$ans[, 3]
-    mw_se_mao[i, ] = res.mao.MW$ans[, 3]
-    # uw_se_mao[i, ] = res.mao.UW$ans[, 3]
-  }
+  # if (mao.method) {
+  #   if (!multi.arm) {
+  #     tmax = min(max(Y[Z == 1]), max(Y[Z == 0]))
+  #     ## IPW based
+  #     res.mao.IPW = estimand_analysis(
+  #       X = X[, -1],
+  #       Z = Z,
+  #       Y = Y,
+  #       delta = DELTA,
+  #       weight.type = "IPW",
+  #       t.trunc = truncate,
+  #       tmax = tmax
+  #     )
+  #     ## OW based
+  #     res.mao.OW = estimand_analysis(
+  #       X = X[, -1],
+  #       Z = Z,
+  #       Y = Y,
+  #       delta = DELTA,
+  #       weight.type = "OVERLAP",
+  #       t.trunc = truncate,
+  #       tmax = tmax
+  #     )
+  #     ## MW based
+  #     res.mao.MW = estimand_analysis(
+  #       X = X[, -1],
+  #       Z = Z,
+  #       Y = Y,
+  #       delta = DELTA,
+  #       weight.type = "MW",
+  #       t.trunc = truncate,
+  #       tmax = tmax
+  #     )
+  #     ## Unweighted Cox
+  #     # res.mao.UW = estimand_analysis(
+  #     #   X = X[, -1],
+  #     #   Z = Z,
+  #     #   Y = Y,
+  #     #   delta = DELTA,
+  #     #   weight.type = "UNWEIGHT",
+  #     #   t.trunc = truncate,
+  #     #   tmax = tmax
+  #     # )
+  #   } else{
+  #     tmax = min(max(Y[Z == 0]), max(Y[Z == 2]))
+  #     X.aug = cbind(X, as.numeric(Z == 1))
+  #     colnames(X.aug) = c("X0", "X1", "X2", "X3", "X4", "Z01")
+  #     Z.aug = as.numeric(Z == 2)
+  #     ## IPW based
+  #     res.mao.IPW = estimand_analysis(
+  #       X = X.aug[, -1],
+  #       Z = Z.aug,
+  #       Y = Y,
+  #       delta = DELTA,
+  #       weight.type = "IPW",
+  #       t.trunc = truncate,
+  #       tmax = tmax
+  #     )
+  #     ## OW based
+  #     res.mao.OW = estimand_analysis(
+  #       X = X.aug[, -1],
+  #       Z = Z.aug,
+  #       Y = Y,
+  #       delta = DELTA,
+  #       weight.type = "OVERLAP",
+  #       t.trunc = truncate,
+  #       tmax = tmax
+  #     )
+  #     ## MW based
+  #     res.mao.MW = estimand_analysis(
+  #       X = X.aug[, -1],
+  #       Z = Z.aug,
+  #       Y = Y,
+  #       delta = DELTA,
+  #       weight.type = "MW",
+  #       t.trunc = truncate,
+  #       tmax = tmax
+  #     )
+  #     ## Unweighted Cox
+  #     # res.mao.UW = estimand_analysis(
+  #     #   X = X.aug[, -1],
+  #     #   Z = Z.aug,
+  #     #   Y = Y,
+  #     #   delta = DELTA,
+  #     #   weight.type = "UNWEIGHT",
+  #     #   t.trunc = truncate,
+  #     #   tmax = tmax
+  #     # )
+  #   }
+  #   ipw_est_mao[i, ] = res.mao.IPW$ans[, 2]
+  #   ow_est_mao[i, ] = res.mao.OW$ans[, 2]
+  #   mw_est_mao[i, ] = res.mao.MW$ans[, 2]
+  #   # uw_est_mao[i, ] = res.mao.UW$ans[, 2]
+  #   
+  #   ipw_se_mao[i, ] = res.mao.IPW$ans[, 3]
+  #   ow_se_mao[i, ] = res.mao.OW$ans[, 3]
+  #   mw_se_mao[i, ] = res.mao.MW$ans[, 3]
+  #   # uw_se_mao[i, ] = res.mao.UW$ans[, 3]
+  # }
   
   ### Cox Q model
   if (cox.q.method) {
@@ -417,7 +584,6 @@ for (i in (1:n_simu)) {
       DELTA,
       X,
       Z,
-      alpha = alpha.arg,
       truncate =  truncate,
       boot.time = 250
     )
@@ -432,7 +598,6 @@ for (i in (1:n_simu)) {
       DELTA,
       X,
       Z,
-      alpha = alpha.arg,
       truncate =  truncate,
       boot.time = 250
     )
@@ -446,7 +611,6 @@ for (i in (1:n_simu)) {
     i,
     ow_est,
     ipw_est,
-    unadj_est,
     ow_se,
     ipw_se,
     true_est,
