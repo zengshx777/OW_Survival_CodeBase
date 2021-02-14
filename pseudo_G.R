@@ -220,3 +220,179 @@ G.pseudo <- function(Y,
     )
   )
 }
+
+
+unadj.pseudo <- function(Y,
+                            Z,
+                            DELTA,
+                            X,
+                            estimand.type = "ASCE",
+                            evaluate.time = NA,
+                            by.group.version = F,
+                            dependent.adjustment = F) {
+  ############
+  # Y: (vec) Vector of end time min(T,C)
+  # Z: (vec) Vector of treatment arm, encoding from 0 to (J-1)
+  # DELTA: (vec) Whether dead within the period
+  # X: (matrix N*p) design matrix
+  # alpha: (vec) setup for estimand
+  # weight.type: (str) weighting schemes
+  # estimand.type: (str) type of survival estimand SPCE, ASCE, RACE
+  # evaluate.time: (float) time point for evaluation (SPCE, RACE)
+  # var.method: (int) type of variance calculation
+  # target.j: (int) index for arm, ranging from 0 to (J-1), only used for ATT
+  # ps.threshold: threshold for ps truncation 0.1 e.g., usually for IPW
+  # dependent.censoring: (bool): whether use the model counted for dependent censoring.
+  ############
+  
+  ### Add intercept if not for the design matrix
+  if (!all(X[, 1] == 1)) {
+    X = cbind(1, X)
+  }
+  
+  ### Summary statistics
+  N = length(Y)
+  
+  if (estimand.type == "ASCE") {
+    evaluate.time = (max(Y) + max(Y[Y != max(Y)])) / 2
+  }
+  
+  ### Handle error for truncation
+  if (max(Y) < evaluate.time) {
+    return (list(tau = NA, se = NA))
+  }
+  if (dependent.adjustment) {
+    Censoring.DELTA = 1 - DELTA
+    censoring.model = coxph(Surv(Y, Censoring.DELTA) ~ X)
+    km.object = survfit(censoring.model, newdata = data.frame(X = X))
+    km.time = km.object$time
+    ind = unlist(lapply(
+      pmin(Y, evaluate.time),
+      FUN = function(x) {
+        max(which(x >= km.time))
+      }
+    ))
+    weight.prob = unlist(lapply(
+      1:N,
+      FUN = function(x) {
+        km.object$surv[ind[x], x]
+      }
+    ))
+    
+    if (estimand.type == "ASCE") {
+      V = Y
+    } else if (estimand.type == "RACE") {
+      V = pmin(Y, evaluate.time)
+    } else if (estimand.type == "SPCE") {
+      V = as.numeric(Y >= evaluate.time)
+    } else{
+      stop("Undefined estimand")
+    }
+    # truncation
+    keep.ind = which(weight.prob >= 0.03)
+    V = V[keep.ind]
+    weight.prob = weight.prob[keep.ind]
+    Y = Y[keep.ind]
+    Z = Z[keep.ind]
+    X = X[keep.ind, ]
+    DELTA = DELTA[keep.ind]
+    N = length(Y)
+    indicator = as.numeric((DELTA == 1) | (Y >= evaluate.time))
+    pseudo.obs = V * indicator / weight.prob
+    var.method = 3
+  } else{
+    ### Pseudo Obs
+    if (estimand.type == "ASCE") {
+      if (by.group.version) {
+        pseudo.obs = rep(NA, length(Y))
+        for (k in 0:(max(Z))) {
+          pseudo.obs[Z == k] = fast.pseudo(Y[Z == k], event = DELTA[Z == k], type = "mean")
+        }
+      } else{
+        pseudo.obs = fast.pseudo(Y, event = DELTA, type = "mean")
+      }
+    } else if (estimand.type == "RACE") {
+      if (by.group.version) {
+        for (k in 0:max(Z)) {
+          if (max(Y[Z == k][DELTA[Z == k] == 1]) < evaluate.time) {
+            print("not valid for by group pseudo obs calculation")
+            return (list(
+              tau = NA,
+              mu = NA,
+              se = NA,
+              alpha.matrix = NA,
+              Sigma.matrix = NA
+            ))
+          }
+        }
+        pseudo.obs = rep(NA, length(Y))
+        for (k in 0:(max(Z))) {
+          pseudo.obs[Z == k] = fast.pseudo(Y[Z == k],
+                                           event = DELTA[Z == k],
+                                           tmax = evaluate.time,
+                                           type = "mean")
+        }
+      } else{
+        pseudo.obs = fast.pseudo(Y,
+                                 event = DELTA,
+                                 tmax = evaluate.time,
+                                 type = "mean")
+      }
+      
+    } else if (estimand.type == "SPCE") {
+      if (by.group.version) {
+        pseudo.obs = rep(NA, length(Y))
+        for (k in 0:(max(Z))) {
+          pseudo.obs[Z == k] = fast.pseudo(Y[Z == k],
+                                           event = DELTA[Z == k],
+                                           tmax = evaluate.time,
+                                           type = "surv")
+        }
+      } else{
+        pseudo.obs = fast.pseudo(Y,
+                                 event = DELTA,
+                                 tmax = evaluate.time,
+                                 type = "surv")
+      }
+    } else{
+      stop("Undefined estimand")
+    }
+  }
+  
+  J = max(Z) + 1   # Number of arms
+  A = matrix(unlist(lapply(
+    Z,
+    FUN = function(x) {
+      as.numeric(x == 0:(J - 1))
+    }
+  )), byrow = T, ncol = J)  # A_ij matrix
+  muhat.h = as.numeric(colSums(A * pseudo.obs) / colSums(A)) 
+  
+  ind.alpha = combn(J, 2)
+  alpha.matrix = matrix(0, nrow = ncol(ind.alpha), ncol = J)
+  alpha.matrix[cbind(1:nrow(alpha.matrix), ind.alpha[1,])] = -1
+  alpha.matrix[cbind(1:nrow(alpha.matrix), ind.alpha[2,])] = 1
+  
+  var.list = unlist(lapply(0:(J-1),FUN=function(x){var(pseudo.obs[Z==x])/sum(Z==x)}))
+  
+  tau.h = as.matrix(muhat.h %*% t(alpha.matrix))  # Point estimation
+  
+  COV.m = diag(var.list)
+  # variance for tau12,tau23
+  Sigmah = diag(alpha.matrix%*%COV.m%*%t(alpha.matrix))
+  return (
+    list(
+      tau = tau.h,
+      mu = muhat.h,
+      se = sqrt(Sigmah),
+      alpha.matrix = alpha.matrix,
+      Sigma.matrix = COV.m
+    )
+  )
+}
+  
+
+
+
+
+

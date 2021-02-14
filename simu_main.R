@@ -175,7 +175,35 @@ for (i in 1:n_mc) {
 
 for (i in (1:n_simu)) {
   source("simu_data_gen.R")
-
+  res.pseudo.unadj=unadj.pseudo(
+    Y,
+    Z,
+    DELTA,
+    X,
+    estimand.type = "ASCE",
+    dependent.adjustment = dependent.censoring
+  )
+  
+  res.pseudo.unadj=unadj.pseudo(
+    Y,
+    Z,
+    DELTA,
+    X,
+    estimand.type = "RACE",
+    evaluate.time = truncate,
+    dependent.adjustment = dependent.censoring
+  )
+  
+  res.pseudo.unadj=unadj.pseudo(
+    Y,
+    Z,
+    DELTA,
+    X,
+    estimand.type = "SPCE",
+    evaluate.time = truncate,
+    dependent.adjustment = dependent.censoring
+  )
+  
   res.pseudo.g=G.pseudo(
     Y,
     Z,
