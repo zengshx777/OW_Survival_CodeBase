@@ -17,7 +17,7 @@ truncate.ph = 50
 truncate.aft = 60
 
 n_simu = 200
-n_mc = 10000
+n_mc = 50000
 
 # mao.method = T
 cox.q.method = T
@@ -26,11 +26,11 @@ by.group.pseudo = T
 library(MASS)
 library(mvtnorm)
 source("cox_model.R")
-source("PSW_pseudo.R")
+# source("PSW_pseudo.R")
 #source("Mao_Method_func.R")
 source("simu_utils.R")
-source("AIPW_pseudo.R")
-source("pseudo_G.R")
+# source("AIPW_pseudo.R")
+# source("pseudo_G.R")
 set.seed(2020)
 
 # if (multi.arm) {
@@ -170,8 +170,30 @@ for (i in 1:n_mc) {
   {
     print(paste("== MC", i, "=="))
   }
+  
+  true_mean[i,]=c(mean(Survival_time_0),mean(Survival_time_1),mean(Survival_time_2),
+                 mean(pmin(Survival_time_0,truncate)),mean(pmin(Survival_time_1,truncate)),
+                 mean(pmin(Survival_time_2,truncate)),mean(Survival_time_0 > truncate),
+                 mean(Survival_time_1 > truncate),mean(Survival_time_2 > truncate))
+  true_mean_ow[i,]=c(mean(Survival_time_0*tilt.h)/mean(tilt.h),
+                     mean(Survival_time_1*tilt.h)/mean(tilt.h),
+                     mean(Survival_time_2*tilt.h)/mean(tilt.h),
+                    mean(pmin(Survival_time_0,truncate)*tilt.h)/mean(tilt.h),
+                    mean(pmin(Survival_time_1,truncate)*tilt.h)/mean(tilt.h),
+                    mean(pmin(Survival_time_2,truncate)*tilt.h)/mean(tilt.h),
+                    mean(as.numeric(Survival_time_0 > truncate)*tilt.h)/mean(tilt.h),
+                    mean(as.numeric(Survival_time_1 > truncate)*tilt.h)/mean(tilt.h),
+                    mean(as.numeric(Survival_time_2 > truncate)*tilt.h)/mean(tilt.h))
 }
 #########
+# true.value = matrix(NA,ncol=9,nrow=4)
+# true.value[1,]=apply(true_mean,2,mean)
+# true.value[2,]=(apply(true_mean_ow,2,mean))
+# true.value[3,]=apply(true_est,2,mean)
+# true.value[4,]=apply(true_est_ow,2,mean)
+# true.value = true.value
+# true.value.2 = true.value
+# true.value.3 = true.value
 
 for (i in (1:n_simu)) {
   source("simu_data_gen.R")
@@ -613,10 +635,23 @@ for (i in (1:n_simu)) {
       X,
       Z,
       truncate =  truncate,
+      # ipw.weighted = T,
       boot.time = 250
     )
     cox_q_est[i, ] = res.cox.q$est
     cox_q_se[i, ] = res.cox.q$se
+    
+    res.cox.q = cox.q.model.fit(
+      Y,
+      DELTA,
+      X,
+      Z,
+      truncate =  truncate,
+      ipw.weighted = T,
+      boot.time = 250
+    )
+    cox_ipw_est[i, ] = res.cox.q$est
+    cox_ipw_se[i, ] = res.cox.q$se
   }
   
   ## MSM model

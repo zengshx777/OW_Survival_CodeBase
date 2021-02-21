@@ -11,7 +11,7 @@ g.calculation <- function(km.object, end.time, type = 1) {
   if (type == 1) {
     final.index = max(which(time.grid <= end.time))
     final.index = min(final.index, nrow(surv.prob))
-    return (mean(surv.prob[final.index, ]))
+    return (mean(surv.prob[final.index,]))
   } else{
     if (!is.na(end.time)) {
       final.index = max(which(time.grid <= end.time))
@@ -38,9 +38,10 @@ g.calculation <- function(km.object, end.time, type = 1) {
 }
 ### Obtain point estimation from fitting Cox model
 cox.q.model.est <-
-  function(Y, DELTA, X, Z, truncate) {
+  function(Y, DELTA, X, Z, truncate, ipw.weighted) {
     J = max(Z) + 1   # Number of arms
     mu.est.asce <- mu.est.race <- mu.est.spce <- rep(NA, J)
+    
     
     A = matrix(unlist(lapply(
       Z,
@@ -50,7 +51,23 @@ cox.q.model.est <-
     )), byrow = T, ncol = J)
     # Delete intercept term
     if (all(X[, 1] == 1)) {
-      X = X[, -1]
+      X = X[,-1]
+    }
+    
+    if (ipw.weighted) {
+      gps.model = multinom(Z ~ X,
+                           maxit = 500,
+                           Hess = TRUE,
+                           trace = FALSE)
+      e = gps.model$fitted.values
+      if (length(unique(Z)) == 2) {
+        e = cbind(1 - e, e)
+      }
+      w = matrix(rep(colMeans(e), length(Y)),
+                 ncol = J,
+                 byrow = T) / e
+      # Stablized weights
+      s.weights = rowSums(A * w)
     }
     for (k in 1:(J - 1)) {
       nam <- paste("A", k, sep = ".")
@@ -59,7 +76,12 @@ cox.q.model.est <-
     cox.formula = as.formula(paste("Surv(Y,DELTA)~X", paste(paste("A", 1:(
       J - 1
     ), sep = "."), collapse = "+"), sep = "+"))
-    cox_q_model = coxph(cox.formula, method = "breslow")
+    if (ipw.weighted) {
+      cox_q_model = coxph(cox.formula, weights = s.weights, method = "breslow")
+    } else{
+      cox_q_model = coxph(cox.formula, method = "breslow")
+    }
+    
     alpha.matrix = matrix(0, ncol = (J - 1), nrow = length(Y))
     
     temp.data = data.frame(cbind(X, alpha.matrix))
@@ -102,7 +124,7 @@ cox.q.model.est <-
       point.est[2, k] = mu.est.race[ind.alpha[2, k]] - mu.est.race[ind.alpha[1, k]]
       point.est[3, k] = mu.est.spce[ind.alpha[2, k]] - mu.est.spce[ind.alpha[1, k]]
     }
-    res = c(point.est[1,], point.est[2,], point.est[3,])
+    res = c(point.est[1, ], point.est[2, ], point.est[3, ])
     return (res)
   }
 ### Obtain point estimation and CI (bootstrap) from fitting Cox model
@@ -112,8 +134,9 @@ cox.q.model.fit <-
            X,
            Z,
            truncate,
+           ipw.weighted = FALSE,
            boot.time = 250) {
-    point.est =  cox.q.model.est(Y, DELTA, X, Z, truncate)
+    point.est =  cox.q.model.est(Y, DELTA, X, Z, truncate, ipw.weighted)
     alpha.ind = combn(max(Z) + 1, 2)
     comb.num = ncol(alpha.ind)
     boot.est = matrix(NA, ncol = 3 * comb.num, nrow = boot.time)
@@ -122,12 +145,12 @@ cox.q.model.fit <-
       b.id = sample(1:n.size, n.size, replace = T)
       b.Y = Y[b.id]
       b.DELTA = DELTA[b.id]
-      b.X = X[b.id,]
+      b.X = X[b.id, ]
       b.Z = Z[b.id]
       if (var(b.Z) == 0) {
         next
       }
-      boot.est[b,] = cox.q.model.est(b.Y, b.DELTA, b.X, b.Z, truncate)
+      boot.est[b, ] = cox.q.model.est(b.Y, b.DELTA, b.X, b.Z, truncate, ipw.weighted)
       # print(paste("== Bootstrap time", b, "=="))
     }
     se = apply(boot.est, 2, sd, na.rm = T)
@@ -149,7 +172,7 @@ msm.calculation <- function(km.object, end.time, type = 1) {
   if (type == 1) {
     final.index = max(which(time.grid <= end.time))
     final.index = min(final.index, nrow(surv.prob))
-    return (surv.prob[final.index, ])
+    return (surv.prob[final.index,])
   } else{
     if (!is.na(end.time)) {
       final.index = max(which(time.grid <= end.time))
@@ -179,7 +202,7 @@ cox.msm.model.est <-
   function(Y, DELTA, X, Z, truncate) {
     # Delete intercept term
     if (all(X[, 1] == 1)) {
-      X = X[, -1]
+      X = X[,-1]
     }
     gps.model = multinom(Z ~ X,
                          maxit = 500,
@@ -198,17 +221,19 @@ cox.msm.model.est <-
         as.numeric(x == 0:(J - 1))
       }
     )), byrow = T, ncol = J)
+    # Stablized weights
     s.weights = rowSums(A * w)
     for (k in 1:(J - 1)) {
       nam <- paste("A", k, sep = ".")
       assign(nam, A[, (k + 1)])
     }
+    
     cox.formula = as.formula(paste("Surv(Y,DELTA)~", paste(paste("A", 1:(
       J - 1
     ), sep = "."), collapse = "+"), sep = ""))
     cox.msm.model = coxph(cox.formula, weights = s.weights, method = "breslow")
     A.unique = diag(rep(1, J))
-    A.unique = data.frame(A.unique[, -1])
+    A.unique = data.frame(A.unique[,-1])
     colnames(A.unique) = names(cox.msm.model$coefficients)
     km.object = survfit(cox.msm.model, newdata = A.unique)
     
@@ -223,7 +248,7 @@ cox.msm.model.est <-
       point.est[2, k] = mu.est.race[ind.alpha[2, k]] - mu.est.race[ind.alpha[1, k]]
       point.est[3, k] = mu.est.spce[ind.alpha[2, k]] - mu.est.spce[ind.alpha[1, k]]
     }
-    res = c(point.est[1,], point.est[2,], point.est[3,])
+    res = c(point.est[1, ], point.est[2, ], point.est[3, ])
     return (res)
   }
 ### Obtain MSM point estimation and CI from the Cox model
@@ -243,12 +268,12 @@ cox.msm.model.fit <-
       b.id = sample(1:n.size, n.size, replace = T)
       b.Y = Y[b.id]
       b.DELTA = DELTA[b.id]
-      b.X = X[b.id, ]
+      b.X = X[b.id,]
       b.Z = Z[b.id]
       if (var(b.Z) == 0) {
         next
       }
-      boot.est[b, ] = cox.msm.model.est(b.Y, b.DELTA, b.X, b.Z, truncate)
+      boot.est[b,] = cox.msm.model.est(b.Y, b.DELTA, b.X, b.Z, truncate)
       # print(paste("== Bootstrap time", b, "=="))
     }
     se = apply(boot.est, 2, sd, na.rm = T)

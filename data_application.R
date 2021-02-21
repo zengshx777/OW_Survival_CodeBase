@@ -71,7 +71,6 @@ if (id == 3) {
     var.method = 3,
     weight.type = "IPW",
     estimand.type = "RACE",
-    ps.threshold = 0.03,
     alpha = alpha.arg,
     evaluate.time = truncate.time
   )

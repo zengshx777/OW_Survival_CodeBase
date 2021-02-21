@@ -152,11 +152,11 @@ pdf("good_overlap.pdf",width=10,height=10)
 source("simu_plot.R")
 dev.off()
 
-sub.data= subset(collect.data,balance==2&arm==0&prop==1)
-good_overlap=2
-pdf("good_overlap_binary.pdf",width=10,height=7)
-source("simu_plot_binary.R")
-dev.off()
+# sub.data= subset(collect.data,balance==2&arm==0&prop==1)
+# good_overlap=2
+# pdf("good_overlap_binary.pdf",width=10,height=7)
+# source("simu_plot_binary.R")
+# dev.off()
 
 sub.data= subset(collect.data,balance==3&arm==0&prop==1)
 pdf("poor_overlap.pdf",width=10,height=10)
