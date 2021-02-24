@@ -3,7 +3,7 @@
 
 * ```fast_pseudo_calculation.R``` : Function for calculating pseudo-observations, which is faster than Rpackage **pseudo**.
 * ```PSW_pseudo.R``` : Function for IPW-PO and OW-PO.
-* ```cox_model.R```  : Functions for estimator Cox and Cox-IPW.
+* ```cox_model.R```  : Function for estimator Cox and Cox-IPW.
 * ```pseudo_G.R```  : Function for PO-UNADJ and PO-G.
 * ```Mao_Method_func.R```  : Function for estimators in Mao's paper.
 * ```AIPW_pseudo.R```  : Function for AIPW and AOW.
@@ -11,8 +11,8 @@
 ### R Scripts in folder ```simulation```
 
 * ```simu_main.R``` : Main script for running simulations.
-* ```simu_utils.R``` :  Utility functions for simulations.
-* ```simu_data_gen.R```  : Utility functions for generating simulated data.
+* ```simu_utils.R``` :  Utility function for simulations.
+* ```simu_data_gen.R```  : Utility function for generating simulated data.
 * ```simu_exe.sh```  : Bash script to run simulations in all settings.
 
 ### R Scripts in  folder```data_application```
