@@ -1,6 +1,4 @@
 # OW_Survival_CodeBase
-** Codebase for pseudo outcomes**
-
 ### R Scripts in  folder ```estimators```
 
 * ```fast_pseudo_calculation.R``` : Function for calculating pseudo-observations, which is faster than Rpackage **pseudo**.
