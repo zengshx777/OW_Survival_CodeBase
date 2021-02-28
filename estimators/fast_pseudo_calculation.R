@@ -1,4 +1,3 @@
-# By Dayne Batten
 rmst_on_summary <- function(df, tmax) {
   not_dead <- mapply(function(eligible, event) {
     if (eligible == 0) {

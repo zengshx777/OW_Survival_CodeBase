@@ -232,12 +232,12 @@ PSW.pseudo <- function(Y,
     if (by.group.version) {
       obs.approxi = rep(NA, length(Y))
       for (k in 0:max(Z)) {
-        source("integral_utils.R")
+        source("../estimators/integral_utils.R")
         obs.approxi[Z == k] = calculate.obs.approximate (Y[Z == k], DELTA[Z ==
                                                                             k], evaluate.time, estimand.type, var.method)
       }
     } else{
-      source("integral_utils.R")
+      source("../estimators/integral_utils.R")
       obs.approxi = calculate.obs.approximate (Y, DELTA, evaluate.time, estimand.type, var.method)
     }
   }

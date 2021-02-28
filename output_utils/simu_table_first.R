@@ -4,40 +4,40 @@ helper<-function(results,data, est.id=1)
   if(nrow(data)==0){stop()}
   if(est.id==1){
     results=rbind(results,cbind(
-      data$OW.BIAS.ASCE3,data$IPW.BIAS.ASCE3,data$COX.Q.BIAS.ASCE3,
-      data$COX.MSM.BIAS.ASCE3,
+      data$OW.BIAS.ASCE1,data$IPW.BIAS.ASCE1,data$COX.Q.BIAS.ASCE1,
+      data$COX.MSM.BIAS.ASCE1,
       #data$IPW.MAO.BIAS.ASCE,
-      data$OW.RMSE.ASCE3,data$IPW.RMSE.ASCE3,data$COX.Q.RMSE.ASCE3,
-      data$COX.MSM.RMSE.ASCE3,
+      data$OW.RMSE.ASCE1,data$IPW.RMSE.ASCE1,data$COX.Q.RMSE.ASCE1,
+      data$COX.MSM.RMSE.ASCE1,
       #data$IPW.MAO.RMSE.ASCE,
-      data$OW.COVER.ASCE3,data$IPW.COVER.ASCE3,data$COX.Q.COVER.ASCE3,
-      data$COX.MSM.COVER.ASCE3
+      data$OW.COVER.ASCE1,data$IPW.COVER.ASCE1,data$COX.Q.COVER.ASCE1,
+      data$COX.MSM.COVER.ASCE1
       #data$IPW.MAO.COVER.ASCE
-  ))}else if(est.id == 2){
-    results=rbind(results,cbind(
-      data$OW.BIAS.RACE3,data$IPW.BIAS.RACE3,data$COX.Q.BIAS.RACE3,
-      data$COX.MSM.BIAS.RACE3,
-      #data$IPW.MAO.BIAS.RACE,
-      data$OW.RMSE.RACE3,data$IPW.RMSE.RACE3,data$COX.Q.RMSE.RACE3,
-      data$COX.MSM.RMSE.RACE3,
-      #data$IPW.MAO.RMSE.RACE,
-      data$OW.COVER.RACE3,data$IPW.COVER.RACE3,data$COX.Q.COVER.RACE3,
-      data$COX.MSM.COVER.RACE3
-      #data$IPW.MAO.COVER.RACE
+    ))}else if(est.id == 2){
+      results=rbind(results,cbind(
+        data$OW.BIAS.RACE1,data$IPW.BIAS.RACE1,data$COX.Q.BIAS.RACE1,
+        data$COX.MSM.BIAS.RACE1,
+        #data$IPW.MAO.BIAS.RACE,
+        data$OW.RMSE.RACE1,data$IPW.RMSE.RACE1,data$COX.Q.RMSE.RACE1,
+        data$COX.MSM.RMSE.RACE1,
+        #data$IPW.MAO.RMSE.RACE,
+        data$OW.COVER.RACE1,data$IPW.COVER.RACE1,data$COX.Q.COVER.RACE1,
+        data$COX.MSM.COVER.RACE1
+        #data$IPW.MAO.COVER.RACE
       ))
-  }else{
-    results=rbind(results,cbind(
-      data$OW.BIAS.SPCE3,data$IPW.BIAS.SPCE3,data$COX.Q.BIAS.SPCE3,
-      data$COX.MSM.BIAS.SPCE3,
-      #data$IPW.MAO.BIAS.SPCE,
-      data$OW.RMSE.SPCE3,data$IPW.RMSE.SPCE3,data$COX.Q.RMSE.SPCE3,
-      data$COX.MSM.RMSE.SPCE3,
-      #data$IPW.MAO.RMSE.SPCE,
-      data$OW.COVER.SPCE3,data$IPW.COVER.SPCE3,data$COX.Q.COVER.SPCE3,
-      data$COX.MSM.COVER.SPCE3
-      #data$IPW.MAO.COVER.SPCE
-    ))
-  }
+    }else{
+      results=rbind(results,cbind(
+        data$OW.BIAS.SPCE1,data$IPW.BIAS.SPCE1,data$COX.Q.BIAS.SPCE1,
+        data$COX.MSM.BIAS.SPCE1,
+        #data$IPW.MAO.BIAS.SPCE,
+        data$OW.RMSE.SPCE1,data$IPW.RMSE.SPCE1,data$COX.Q.RMSE.SPCE1,
+        data$COX.MSM.RMSE.SPCE1,
+        #data$IPW.MAO.RMSE.SPCE,
+        data$OW.COVER.SPCE1,data$IPW.COVER.SPCE1,data$COX.Q.COVER.SPCE1,
+        data$COX.MSM.COVER.SPCE1
+        #data$IPW.MAO.COVER.SPCE
+      ))
+    }
   return(results)
 }
 
@@ -71,7 +71,7 @@ produce_latex<-function(results){
       # est.text="$ \\tau_{j,j'}^{\\SPCE,h} $"
       est.text = "ASCE"
     }
-
+    
     
     latex_line = c(latex_line,paste(est.text,"&",text,
                                     paste(paste("&",sprintf("%.3f", round(results[k,],3))),collapse =""),"\\\\",skip.text,"\n"
@@ -80,7 +80,6 @@ produce_latex<-function(results){
   
   cat(latex_line)
 }
-
 results = NULL
 results=helper(results,subset(collect.data,sample==300&arm==1&prop==T&dependent==0),est.id=3)
 results=helper(results,subset(collect.data,sample==300&arm==1&prop==T&dependent==0),est.id=2)

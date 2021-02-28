@@ -18,6 +18,10 @@ if(good_overlap<=2){
                      sub.data$IPW.AIPW.BIAS.SPCE3,
                      sub.data$OW.AIPW.BIAS.SPCE3)
 }
+if(pseudo.g.draw){
+  ylim.range = range(sub.data$OW.BIAS.SPCE3,sub.data$IPW.UNTRIM.BIAS.SPCE3,sub.data$COX.Q.BIAS.SPCE3,
+                     sub.data$PSEUDO.G.BIAS.SPCE3)
+}
 plot(sub.data$sample,sub.data$OW.BIAS.SPCE3,type='o',
      col="red",ylim = ylim.range,
      lwd=2,pch=13,xlab="Sample size",ylab="BIAS",main="SPCE")
@@ -31,7 +35,9 @@ if(aipw.draw){
 }
 if(pseudo.g.draw){
   lines(sub.data$sample,sub.data$PSEUDO.G.BIAS.SPCE3,col="green",type='o',lwd=2,pch=20)
-  lines(sub.data$sample,sub.data$PSEUDO.UNADJ.BIAS.SPCE3,col="magenta",type='o',lwd=2,pch=21)
+  if(good_overlap==1){
+    lines(sub.data$sample,sub.data$PSEUDO.UNADJ.BIAS.SPCE3,col="magenta",type='o',lwd=2,pch=21)
+  }
 }
 if(mao.draw){
   lines(sub.data$sample,sub.data$IPW.MAO.BIAS.SPCE3,col="green",type='o',lwd=2,pch=18)
@@ -49,6 +55,10 @@ if(good_overlap<=2){
                      sub.data$IPW.AIPW.BIAS.RACE3,
                      sub.data$OW.AIPW.BIAS.RACE3)
 }
+if(pseudo.g.draw){
+  ylim.range = range(sub.data$OW.BIAS.RACE3,sub.data$IPW.UNTRIM.BIAS.RACE3,sub.data$COX.Q.BIAS.RACE3,
+                     sub.data$PSEUDO.G.BIAS.RACE3)
+}
 plot(sub.data$sample,sub.data$OW.BIAS.RACE3,type='o',
      col="red",ylim = ylim.range,
      lwd=2,pch=13,xlab="Sample size",ylab="BIAS",main="RACE")
@@ -61,7 +71,9 @@ if(aipw.draw){
 }
 if(pseudo.g.draw){
   lines(sub.data$sample,sub.data$PSEUDO.G.BIAS.RACE3,col="green",type='o',lwd=2,pch=20)
-  lines(sub.data$sample,sub.data$PSEUDO.UNADJ.BIAS.RACE3,col="magenta",type='o',lwd=2,pch=21)
+  if(good_overlap==1){
+    lines(sub.data$sample,sub.data$PSEUDO.UNADJ.BIAS.RACE3,col="magenta",type='o',lwd=2,pch=21)
+  }
 }
 if(mao.draw){
   lines(sub.data$sample,sub.data$IPW.MAO.BIAS.RACE3,col="green",type='o',lwd=2,pch=18)
@@ -78,6 +90,10 @@ if(good_overlap<=2){
                      sub.data$IPW.AIPW.BIAS.ASCE3,
                      sub.data$OW.AIPW.BIAS.ASCE3)
 }
+if(pseudo.g.draw){
+  ylim.range = range(sub.data$OW.BIAS.ASCE3,sub.data$IPW.UNTRIM.BIAS.ASCE3,sub.data$COX.Q.BIAS.ASCE3,
+                     sub.data$PSEUDO.G.BIAS.ASCE3)
+}
 plot(sub.data$sample,sub.data$OW.BIAS.ASCE3,type='o',
      col="red",ylim = ylim.range,
      lwd=2,pch=13,xlab="Sample size",ylab="BIAS",main="ASCE")
@@ -90,7 +106,10 @@ if(aipw.draw){
 }
 if(pseudo.g.draw){
   lines(sub.data$sample,sub.data$PSEUDO.G.BIAS.ASCE3,col="green",type='o',lwd=2,pch=20)
-  lines(sub.data$sample,sub.data$PSEUDO.UNADJ.BIAS.ASCE3,col="magenta",type='o',lwd=2,pch=21)
+  if(good_overlap==1){
+    lines(sub.data$sample,sub.data$PSEUDO.UNADJ.BIAS.ASCE3,col="magenta",type='o',lwd=2,pch=21)
+  }
+  
 }
 if(mao.draw){
   lines(sub.data$sample,sub.data$IPW.MAO.BIAS.ASCE3,col="green",type='o',lwd=2,pch=18)
@@ -114,8 +133,11 @@ if(aipw.draw){
 }
 if(pseudo.g.draw){
   lines(sub.data$sample,sub.data$PSEUDO.G.RMSE.SPCE3,col="green",type='o',lwd=2,pch=20)
-  lines(sub.data$sample,sub.data$PSEUDO.UNADJ.RMSE.SPCE3,col="magenta",type='o',lwd=2,pch=21)
-}
+  if(good_overlap==1){
+    lines(sub.data$sample,sub.data$PSEUDO.UNADJ.RMSE.SPCE3,col="magenta",type='o',lwd=2,pch=21)
+    
+  }
+ }
 if(mao.draw){
   lines(sub.data$sample,sub.data$IPW.MAO.RMSE.SPCE3,col="green",type='o',lwd=2,pch=18)
   lines(sub.data$sample,sub.data$OW.MAO.RMSE.SPCE3,col="magenta",type='o',lwd=2,pch=22)
@@ -137,7 +159,9 @@ lines(sub.data$sample,sub.data$IPW.AIPW.RMSE.RACE3,col="magenta",type='o',lwd=2,
 }
 if(pseudo.g.draw){
   lines(sub.data$sample,sub.data$PSEUDO.G.RMSE.RACE3,col="green",type='o',lwd=2,pch=20)
-  lines(sub.data$sample,sub.data$PSEUDO.UNADJ.RMSE.RACE3,col="magenta",type='o',lwd=2,pch=21)
+  if(good_overlap==1){
+    lines(sub.data$sample,sub.data$PSEUDO.UNADJ.RMSE.RACE3,col="magenta",type='o',lwd=2,pch=21)
+  }
 }
 if(mao.draw){
   lines(sub.data$sample,sub.data$IPW.MAO.RMSE.RACE3,col="green",type='o',lwd=2,pch=18)
@@ -161,12 +185,16 @@ if(aipw.draw){
 }
 if(pseudo.g.draw){
   lines(sub.data$sample,sub.data$PSEUDO.G.RMSE.ASCE3,col="green",type='o',lwd=2,pch=20)
-  lines(sub.data$sample,sub.data$PSEUDO.UNADJ.RMSE.ASCE3,col="magenta",type='o',lwd=2,pch=21)
+  if(good_overlap==1){
+    lines(sub.data$sample,sub.data$PSEUDO.UNADJ.RMSE.ASCE3,col="magenta",type='o',lwd=2,pch=21)
+    
+  }
 }
 if(mao.draw){
   lines(sub.data$sample,sub.data$IPW.MAO.RMSE.ASCE3,col="green",type='o',lwd=2,pch=18)
   lines(sub.data$sample,sub.data$OW.MAO.RMSE.ASCE3,col="magenta",type='o',lwd=2,pch=22)
 }
+
 
 if(!aipw.draw){
 plot(sub.data$sample,sub.data$OW.COVER.SPCE3,type='o',
@@ -178,7 +206,9 @@ lines(sub.data$sample,sub.data$COX.Q.COVER.SPCE3,col="black",type='o',lwd=2,pch=
 lines(sub.data$sample,sub.data$COX.MSM.COVER.SPCE3,col="orange",type='o',lwd=2,pch=16)
 if(pseudo.g.draw){
   lines(sub.data$sample,sub.data$PSEUDO.G.COVER.SPCE3,col="green",type='o',lwd=2,pch=20)
-  lines(sub.data$sample,sub.data$PSEUDO.UNADJ.COVER.SPCE3,col="magenta",type='o',lwd=2,pch=21)
+  if(good_overlap==1){
+    lines(sub.data$sample,sub.data$PSEUDO.UNADJ.COVER.SPCE3,col="magenta",type='o',lwd=2,pch=21)
+  }
 }
 if(mao.draw){
   lines(sub.data$sample,sub.data$IPW.MAO.COVER.SPCE3,col="green",type='o',lwd=2,pch=18)
@@ -186,11 +216,21 @@ if(mao.draw){
 }
 abline(h=0.95,lty=2)
 
+if(!mao.draw){
+  ylim.range = range(sub.data$OW.COVER.RACE3,sub.data$IPW.UNTRIM.COVER.RACE3,sub.data$COX.Q.COVER.RACE3,
+                     sub.data$COX.MSM.COVER.RACE3,1)
+}else{
+  ylim.range = range(sub.data$OW.COVER.RACE3,sub.data$IPW.UNTRIM.COVER.RACE3,sub.data$COX.Q.COVER.RACE3,
+                     sub.data$COX.MSM.COVER.RACE3,sub.data$IPW.MAO.COVER.RACE3,sub.data$OW.MAO.COVER.RACE3,1)
+}
+if(pseudo.g.draw){
+  ylim.range = range(sub.data$OW.COVER.RACE3,sub.data$IPW.UNTRIM.COVER.RACE3,sub.data$COX.Q.COVER.RACE3,
+                     sub.data$COX.MSM.COVER.RACE3,sub.data$PSEUDO.G.COVER.RACE3,1)
+  
+}
 
 plot(sub.data$sample,sub.data$OW.COVER.RACE3,type='o',
-     col="red",ylim = range(sub.data$OW.COVER.RACE3,
-                            sub.data$IPW.UNTRIM.COVER.RACE3,sub.data$COX.Q.COVER.RACE3,
-                            sub.data$COX.MSM.COVER.RACE3,1),
+     col="red",ylim = ylim.range,
      lwd=2,pch=13,xlab="Sample size",ylab="COVER",main="RACE")
 lines(sub.data$sample,sub.data$IPW.UNTRIM.COVER.RACE3,col="blue",type='o',lwd=2,pch=14)
 lines(sub.data$sample,sub.data$COX.Q.COVER.RACE3,col="black",type='o',lwd=2,pch=15)
@@ -210,8 +250,14 @@ if(!mao.draw){
         sub.data$COX.MSM.COVER.ASCE3,1)
 }else{
   ylim.range = range(sub.data$OW.COVER.ASCE3,sub.data$IPW.UNTRIM.COVER.ASCE3,sub.data$COX.Q.COVER.ASCE3,
-                     sub.data$COX.MSM.COVER.ASCE3,sub.data$IPW.MAO.COVER.ASCE3,sub.data$OW.MAO.COVER.ASCE31)
+                     sub.data$COX.MSM.COVER.ASCE3,sub.data$IPW.MAO.COVER.ASCE3,sub.data$OW.MAO.COVER.ASCE3,1)
 }
+if(pseudo.g.draw){
+  ylim.range = range(sub.data$OW.COVER.ASCE3,sub.data$IPW.UNTRIM.COVER.ASCE3,sub.data$COX.Q.COVER.ASCE3,
+                     sub.data$COX.MSM.COVER.ASCE3,sub.data$PSEUDO.G.COVER.ASCE3,1)
+  
+}
+
 
 plot(sub.data$sample,sub.data$OW.COVER.ASCE3,type='o',
      col="red",ylim = ylim.range,
@@ -221,7 +267,10 @@ lines(sub.data$sample,sub.data$COX.Q.COVER.ASCE3,col="black",type='o',lwd=2,pch=
 lines(sub.data$sample,sub.data$COX.MSM.COVER.ASCE3,col="orange",type='o',lwd=2,pch=16)
 if(pseudo.g.draw){
   lines(sub.data$sample,sub.data$PSEUDO.G.COVER.ASCE3,col="green",type='o',lwd=2,pch=20)
-  lines(sub.data$sample,sub.data$PSEUDO.UNADJ.COVER.ASCE3,col="magenta",type='o',lwd=2,pch=21)
+  if(good_overlap==1){
+    lines(sub.data$sample,sub.data$PSEUDO.UNADJ.COVER.ASCE3,col="magenta",type='o',lwd=2,pch=21)
+    
+  }
 }
 if(mao.draw){
   lines(sub.data$sample,sub.data$IPW.MAO.COVER.ASCE3,col="green",type='o',lwd=2,pch=18)
@@ -233,19 +282,26 @@ abline(h=0.95,lty=2)
 par(mar = c(0.1,0.1,1,0.1))
 plot(1, type = "n", axes=FALSE, xlab="", ylab="")
 if(aipw.draw){
-legend("top",legend=c("OW","IPW","Cox-G","Cox-IPW","AOW","AIPW"),
+legend("top",legend=c("OW","IPW","Cox","IPW-Cox","AOW","AIPW"),
        lty=1,col=c("red","blue","black","orange","green","magenta"),lwd=2, horiz = T,
        pch=c(13,14,15,16,17,19))
 }else if(pseudo.g.draw){
-  legend("top",legend=c("OW","IPW","Cox-G","Cox-IPW","PO-G","PO-UNADJ"),
-         lty=1,col=c("red","blue","black","orange","green","magenta"),lwd=2, horiz = T,
-         pch=c(13,14,15,16,20,21))
+  if(good_overlap==1){
+    legend("top",legend=c("OW","IPW","Cox","IPW-Cox","PO-G","PO-UNADJ"),
+           lty=1,col=c("red","blue","black","orange","green","magenta"),lwd=2, horiz = T,
+           pch=c(13,14,15,16,20,21))
+  }else{
+    legend("top",legend=c("OW","IPW","Cox","IPW-Cox","PO-G"),
+           lty=1,col=c("red","blue","black","orange","green"),lwd=2, horiz = T,
+           pch=c(13,14,15,16,20))
+  }
+
 }else if(mao.draw){
-    legend("top",legend=c("OW","IPW","Cox-G","Cox-IPW","IPW-MAO","OW-MAO"),
+    legend("top",legend=c("OW","IPW","Cox","IPW-Cox","IPW-MAO","OW-MAO"),
            lty=1,col=c("red","blue","black","orange","green","magenta"),lwd=2, horiz = T,
            pch=c(13,14,15,16,18,22))
 }else{
-  legend("top",legend=c("OW","IPW","COX-G","Cox-IPW"),
+  legend("top",legend=c("OW","IPW","Cox","IPW-Cox"),
          lty=1,col=c("red","blue","black","orange"),lwd=2, ncol=4,
          pch=c(13,14,15,16))
 }
