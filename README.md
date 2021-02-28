@@ -3,16 +3,16 @@
 
 * ```fast_pseudo_calculation.R``` : Function for calculating pseudo-observations, which is faster than Rpackage **pseudo**.
 * ```PSW_pseudo.R``` : Function for IPW-PO and OW-PO.
-* ```cox_model.R```  : Functions for estimator Cox and Cox-IPW.
+* ```cox_model.R```  : Function for estimator Cox and Cox-IPW.
 * ```pseudo_G.R```  : Function for PO-UNADJ and PO-G.
-* ```Mao_Method_func.```  : Function for estimators in Mao's paper.
+* ```Mao_Method_func.R```  : Function for estimators in Mao's paper.
 * ```AIPW_pseudo.R```  : Function for AIPW and AOW.
 
 ### R Scripts in folder ```simulation```
 
 * ```simu_main.R``` : Main script for running simulations.
-* ```simu_utils.R``` :  Utility functions for simulations.
-* ```simu_data_gen.```  : Utility functions for generating simulated data.
+* ```simu_utils.R``` :  Utility function for simulations.
+* ```simu_data_gen.R```  : Utility function for generating simulated data.
 * ```simu_exe.sh```  : Bash script to run simulations in all settings.
 
 ### R Scripts in  folder```data_application```
@@ -30,7 +30,7 @@ R CMD BATCH --vanilla '--args dependent.censoring=F multi.arm=T prop.hazard=F go
 ```
 
 
-where ```dependent.censoring``` controls whether the censoring is independent of the covariates; ```multi.arm``` controls the number of arms in the data (```T``` for J=3, ```F```} for J=2); ```prop.hazard``` controls whether the proportional hazard assumption is correct; ```good_overlap``` control the overlap conditions (```1``` for RCT, ```2``` for good overlap, ```3``` for poor overlap); ```sample_size``` control the sample size. One simple way to run many simulations in different settings in parallel is to run the ```simu_exe.sh``` directly (you can customize the scenario in this file). The current ```simu_main.R``` will run all estimators mentioned in the paper by default, which might be time-consuming. You can comment out certain estimators to speed up.
+where ```dependent.censoring``` controls whether the censoring is independent of the covariates; ```multi.arm``` controls the number of arms in the data (```T``` for J=3, ```F``` for J=2); ```prop.hazard``` controls whether the proportional hazard assumption is correct; ```good_overlap``` control the overlap conditions (```1``` for RCT, ```2``` for good overlap, ```3``` for poor overlap); ```sample_size``` control the sample size. One simple way to run many simulations in different settings in parallel is to run the ```simu_exe.sh``` directly (you can customize the scenario in this file). The current ```simu_main.R``` will run all estimators mentioned in the paper by default, which might be time-consuming. You can comment out certain estimators to speed up.
 
 The results will be saved in the folder ```simulation_results``` To output the similar Figures and Tables in the paper, please refer to the scripts in folder ```output_utils```
 
