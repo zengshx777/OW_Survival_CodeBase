@@ -272,7 +272,6 @@
 # save(collect.data,file="summary_multi.RData")
 
 # output plots
-setwd("C:/Users/Shuxi ZENG/Dropbox/Fourth Year/OW_Survival/codebase/codebase_copy/")
 load("summary_multi.RData")
 sub.data= subset(collect.data,balance==1&arm==1&prop==1&dependent==0)
 good_overlap=1;aipw.draw=F;pseudo.g.draw=T;mao.draw=F
