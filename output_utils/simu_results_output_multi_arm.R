@@ -181,7 +181,6 @@
 #           }
 #           rmse = matrix(rmse,nrow=9,byrow=T)
 #           bias = matrix(bias,nrow=9,byrow=T)
-#           coverage = coverage+runif(length(coverage),-0.005,0.005)
 #           coverage = matrix(coverage,nrow=9,byrow=T)
 # 
 #           sample = c(sample, sample_size)
@@ -190,56 +189,13 @@
 #           arm = c(arm, multi.arm)
 #           dependent = c(dependent, dependent.censoring)
 # 
+#           ow.performance = rbind(ow.performance, c(rmse[,1],bias[,1],coverage[,1]))
+#           ipw.performance = rbind(ipw.performance, c(rmse[,2],bias[,2],coverage[,2]))
+#           ow.group.performance = rbind(ow.group.performance, c(rmse[,3],bias[,3],coverage[,3]))
+#           ipw.group.performance = rbind(ipw.group.performance, c(rmse[,4],bias[,4],coverage[,4]))
+#           ipw.untrim.performance = rbind(ipw.untrim.performance, c(rmse[,11],bias[,11],coverage[,11]))
 # 
-#           factor=1
-#           c.factor = 0.5;d.factor=1
-#           factor.ipw = 1
-#           if(good_overlap==2){
-#             # factor=0.6
-#           }
-#           if(good_overlap==1){
-#             c.factor=0.3
-#             factor.ow=0.6
-#             factor.ipw=0.6
-#           }
-#           if(good_overlap==3){
-#             factor=0.8
-#             factor.ipw = 1.5
-#             if(dependent.censoring&(!prop.hazard)){
-#               d.factor=2
-#             }
-#           }
-# 
-#           ow.performance = rbind(ow.performance, c(factor*rmse[,1],factor*factor.ow*bias[,1],0.95+c.factor*(coverage[,1]-0.95)))
-#           ipw.performance = rbind(ipw.performance, c(rmse[,2],factor.ipw*bias[,2],0.95+c.factor*(coverage[,2]-0.95) ))
-#           ow.group.performance = rbind(ow.group.performance, c(factor*rmse[,3],factor*factor.ow*bias[,3],0.95+c.factor*(coverage[,3]-0.95)))
-#           ipw.group.performance = rbind(ipw.group.performance, c(rmse[,4],factor.ipw*bias[,4],0.95+c.factor*(coverage[,4]-0.95)))
-#           ipw.untrim.performance = rbind(ipw.untrim.performance, c(rmse[,11],factor.ipw*bias[,11],0.95+c.factor*d.factor*(coverage[,11]-0.95)))
-# 
-#           factor=1
-#           if(good_overlap==2){
-#             factor=1.5
-#             coverage[1:3,5]=coverage[1:3,5]*0.9
-#           }
-#           if(good_overlap==3){
-#             factor=3
-#             coverage[1:3,5]=coverage[1:3,5]*0.8
-#           }
-#           if(dependent.censoring){
-#             coverage[4:9,5]=coverage[4:9,5]*0.95
-#             if(prop.hazard){
-#               factor=3.8
-#             }
-#           }
-#           bias.factor=2
-#           if(!prop.hazard){
-#             coverage[4:9,5]=coverage[4:9,5]*0.8
-#             coverage[,6]=coverage[,6]*0.9
-#             rmse[,6]=rmse[,6]*1.7
-#             bias[,6]=bias[,6]*1.7
-#             bias.factor=1
-#           }
-#           cox.q.performance = rbind(cox.q.performance, c(factor*rmse[,5],bias.factor*factor*bias[,5],coverage[,5]))
+#           cox.q.performance = rbind(cox.q.performance, c(rmse[,5],bias[,5],coverage[,5]))
 #           cox.msm.performance  = rbind(cox.msm.performance, c(rmse[,6],bias[,6],coverage[,6]))
 #           ow.aipw.performance = rbind(ow.aipw.performance, c(rmse[,7],bias[,7]))
 #           ipw.aipw.performance = rbind(ipw.aipw.performance, c(rmse[,8],bias[,8]))
@@ -312,35 +268,7 @@
 #                                 ow.mao.performance,
 #                                 cox.ipw.performance
 #                                 ))
-# setwd("C:/Users/Shuxi ZENG/Dropbox/Fourth Year/OW_Survival/codebase/codebase_copy")
-# for(dependent.censoring in c(1,0)){
-# for (good_overlap in c(1,2,3)){
-#     for (multi.arm in c(1,0)){
-#       for (prop.hazard in c(1,0)){
-#         sub.data= subset(collect.data,balance==good_overlap&arm==multi.arm&prop==prop.hazard&dependent==dependent.censoring)
-#         id = which(collect.data$balance==good_overlap&collect.data$arm==multi.arm&collect.data$prop==prop.hazard&collect.data$dependent==dependent.censoring)
-#         if(length(id)>0){
-#           if.decreasing = T
-#           print(length(id))
-#           source("SORT.R")
-#           collect.data[id,]=sub.data
-#           collect.data[id,"sample"]=sort(sub.data$sample)
-#         }
-#       }}}}
-# for(dependent.censoring in c(1,0)){
-#   for (sample.size in c(150,300,450,600,750)){
-#     for (multi.arm in c(1,0)){
-#       for (prop.hazard in c(1,0)){
-#         sub.data= subset(collect.data,sample==sample.size&arm==multi.arm&prop==prop.hazard&dependent==dependent.censoring)
-#         id = which(collect.data$sample==sample.size&collect.data$arm==multi.arm&collect.data$prop==prop.hazard&collect.data$dependent==dependent.censoring)
-#         if(length(id)>0){
-#           if.decreasing = F
-#           print(length(id))
-#           source("SORT.R")
-#           collect.data[id,]=sub.data
-#           collect.data[id,"balance"]=c(1,2,3)
-#         }
-#       }}}}
+
 # save(collect.data,file="summary_multi.RData")
 
 # output plots
